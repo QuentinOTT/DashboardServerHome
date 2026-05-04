@@ -2,8 +2,19 @@
   "vms": {
     "100": {
       "label": "Serveur Principal",
-      "ip": "192.168.1.100",
-      "services": []
+      "ip": "quentinott.tech",
+      "services": [
+        {
+          "name": "Choptaloc UI",
+          "port": 443,
+          "protocol": "https"
+        },
+        {
+          "name": "AutoVR UI",
+          "port": 443,
+          "protocol": "https"
+        }
+      ]
     },
     "101": {
       "label": "Dashboard LXC",
