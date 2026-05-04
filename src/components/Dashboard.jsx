@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity, TrendingUp } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity, TrendingUp, Globe } from 'lucide-react';
 import Header from './Header';
 import StatsCards from './StatsCards';
 import VMCard from './VMCard';
 import RegistryEditor from './RegistryEditor';
 import VMDetails from './VMDetails';
 import PasscodeLock from './PasscodeLock';
+import DomainManager from './DomainManager';
 import { Toaster } from 'react-hot-toast';
 
 const REFRESH_INTERVAL = 15000;
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const [connected, setConnected] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [showSettings, setShowSettings] = useState(false);
+  const [showDomainManager, setShowDomainManager] = useState(false);
   const [selectedVm, setSelectedVm] = useState(null);
   const [activeTab, setActiveTab] = useState('vms'); 
   const [isAuthorized, setIsAuthorized] = useState(localStorage.getItem('prox_auth') === 'true');
@@ -162,6 +164,13 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex items-center gap-5">
+                  <button
+                    onClick={() => setShowDomainManager(true)}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900/80 border border-white/5 text-slate-400 hover:text-brand-cyan transition-all"
+                  >
+                    <Globe size={16} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Domaines</span>
+                  </button>
                   <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-slate-900/80 border border-white/5">
                     <div className={`w-2 h-2 rounded-full ${connected ? 'bg-brand-mint animate-pulse' : 'bg-rose-500'}`} />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{connected ? 'Sync Live' : 'Hors Ligne'}</span>
@@ -181,6 +190,7 @@ export default function Dashboard() {
         <div className="app-bottom-nav sm:hidden">
           <button onClick={() => setActiveTab('vms')} className={`nav-item ${activeTab === 'vms' ? 'active' : ''}`}><div className="nav-icon-container"><LayoutGrid size={24} /></div><span>Flotte</span></button>
           <button onClick={() => setActiveTab('stats')} className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}><div className="nav-icon-container"><TrendingUp size={24} /></div><span>Stats</span></button>
+          <button onClick={() => setShowDomainManager(true)} className="nav-item"><div className="nav-icon-container"><Globe size={24} /></div><span>Domaines</span></button>
           <button onClick={() => setShowSettings(true)} className="nav-item"><div className="nav-icon-container"><SettingsIcon size={24} /></div><span>Réglages</span></button>
         </div>
 
@@ -197,6 +207,10 @@ export default function Dashboard() {
 
       {showSettings && (
         <RegistryEditor onClose={() => setShowSettings(false)} onSaveSuccess={() => fetchData()} />
+      )}
+
+      {showDomainManager && (
+        <DomainManager onClose={() => setShowDomainManager(false)} />
       )}
 
       {selectedVm && (
