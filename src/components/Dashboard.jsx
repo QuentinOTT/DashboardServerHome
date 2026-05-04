@@ -5,6 +5,7 @@ import StatsCards from './StatsCards';
 import VMCard from './VMCard';
 import RegistryEditor from './RegistryEditor';
 import VMDetails from './VMDetails';
+import PasscodeLock from './PasscodeLock';
 import { Toaster } from 'react-hot-toast';
 
 const REFRESH_INTERVAL = 15000;
@@ -20,7 +21,8 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showSettings, setShowSettings] = useState(false);
   const [selectedVm, setSelectedVm] = useState(null);
-  const [activeTab, setActiveTab] = useState('vms'); // 'vms', 'stats'
+  const [activeTab, setActiveTab] = useState('vms'); 
+  const [isAuthorized, setIsAuthorized] = useState(localStorage.getItem('prox_auth') === 'true');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -89,8 +91,8 @@ export default function Dashboard() {
           <div className="absolute inset-0 w-32 h-32 rounded-full border-4 border-brand-mint/10 border-b-brand-mint animate-spin-reverse" />
           
           {/* Central Icon */}
-          <div className="absolute inset-0 flex items-center justify-center">
-             <Activity size={40} className="text-white animate-pulse" />
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+             <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain animate-pulse" />
           </div>
         </div>
         
@@ -105,6 +107,8 @@ export default function Dashboard() {
         </div>
       </div>
     );
+  if (!isAuthorized) {
+    return <PasscodeLock onAuthorized={() => setIsAuthorized(true)} />;
   }
 
   return (
