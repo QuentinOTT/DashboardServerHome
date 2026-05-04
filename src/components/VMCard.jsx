@@ -207,52 +207,39 @@ export default function VMCard({ vm, healthData, index, viewMode = 'grid', onCli
       style={{ animationDelay: `${index * 0.1}s` }}
     >
       {/* Header */}
-      <div className="p-8 pb-5">
-        <div className="flex items-start justify-between">
-          <div className="flex gap-5">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${
+      <div className="p-5 sm:p-8 pb-4 sm:pb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex gap-3 sm:gap-5 min-w-0">
+            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center border shrink-0 ${
               isRunning ? 'bg-brand-cyan/5 border-brand-cyan/20 text-brand-cyan shadow-[0_0_30px_rgba(0,209,255,0.1)]' : 'bg-slate-900 border-white/5 text-slate-600'
             }`}>
-              <Monitor size={28} />
+              <Monitor size={window.innerWidth < 640 ? 22 : 28} />
             </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h3 className="text-xl font-black text-white tracking-tight">{vm.name}</h3>
-                {isRunning && <div className="w-2 h-2 rounded-full bg-brand-mint shadow-[0_0_10px_#00FF94] animate-pulse" />}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-xl font-black text-white tracking-tight truncate">{vm.name}</h3>
+                {isRunning && <div className="w-1.5 h-1.5 rounded-full bg-brand-mint shadow-[0_0_10px_#00FF94] animate-pulse" />}
               </div>
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-2.5 py-1 rounded-lg border border-white/5">ID {vm.vmid}</span>
-                {vm.label && <span className="text-[10px] uppercase font-black tracking-widest text-brand-cyan">{vm.label}</span>}
+              <div className="flex items-center gap-2 mt-1 sm:mt-1.5">
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-2 py-0.5 rounded-lg border border-white/5">ID {vm.vmid}</span>
+                <span className="text-[8px] sm:text-[10px] uppercase font-black tracking-widest text-brand-cyan truncate">{vm.type === 'lxc' ? 'Container' : 'VM'}</span>
               </div>
             </div>
           </div>
           
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             <PowerButtons />
-            <div className="flex gap-2">
-              <button 
-                onClick={() => isRunning && setShowExplorer(true)}
-                disabled={!isRunning}
-                className="p-2 rounded-xl bg-slate-950/30 border border-white/5 text-slate-400 hover:text-brand-cyan disabled:opacity-20 transition-all cursor-pointer"
-                title="Parcourir les fichiers"
-              >
-                <FolderTree size={16} />
-              </button>
-              <button className="p-2 rounded-xl bg-slate-950/30 border border-white/5 text-slate-400 hover:text-white transition-all">
-                <Settings size={16} />
-              </button>
-            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 mt-8 px-1">
-          <div className="flex items-center gap-2.5 text-slate-400">
-            <Activity size={14} className="text-brand-cyan" />
-            <span className="text-[11px] font-mono font-bold tracking-tight">{vm.ip || 'Pas d\'IP'}</span>
+        <div className="flex items-center gap-4 sm:gap-6 mt-4 sm:mt-8 px-1">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Activity size={12} className="text-brand-cyan" />
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-tight truncate max-w-[100px]">{vm.ip || 'Pas d\'IP'}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-slate-400">
-            <Clock size={14} className="text-brand-mint" />
-            <span className="text-[11px] font-black uppercase tracking-widest">{isRunning ? formatUptime(vm.uptime) : 'ARRÊTÉ'}</span>
+          <div className="flex items-center gap-2 text-slate-400">
+            <Clock size={12} className="text-brand-mint" />
+            <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest">{isRunning ? formatUptime(vm.uptime) : 'ARRÊTÉ'}</span>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity, TrendingUp } from 'lucide-react';
 import Header from './Header';
 import StatsCards from './StatsCards';
 import VMCard from './VMCard';
@@ -19,7 +19,8 @@ export default function Dashboard() {
   const [connected, setConnected] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedVM, setSelectedVM] = useState(null);
+  const [selectedVm, setSelectedVm] = useState(null);
+  const [activeTab, setActiveTab] = useState('vms'); // 'vms', 'stats'
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -107,7 +108,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden pb-20">
+    <div className="min-h-screen relative overflow-hidden">
       <div className="bg-mesh" />
       <div className="bg-grid fixed inset-0 pointer-events-none opacity-40" />
 
@@ -119,7 +120,7 @@ export default function Dashboard() {
         lastUpdate={lastUpdate}
       />
 
-      <main className="max-w-[1800px] mx-auto px-10 py-12">
+      <main className="max-w-[1800px] mx-auto px-4 sm:px-10 py-6 sm:py-12 main-container">
         {/* Error State */}
         {!connected && error && (
           <div className="mb-10 p-8 rounded-[2rem] bg-rose-500/5 border border-rose-500/20 backdrop-blur-xl flex items-center gap-6 animate-enter">
@@ -141,7 +142,11 @@ export default function Dashboard() {
 
         {vms.length > 0 && (
           <>
-            <StatsCards vms={vms} nodeStatus={nodeStatus} />
+            <div className={`${activeTab === 'stats' ? 'block' : 'hidden sm:block'}`}>
+               <StatsCards vms={vms} nodeStatus={nodeStatus} />
+            </div>
+
+            <div className={`${activeTab === 'vms' ? 'block' : 'hidden sm:block'}`}>
 
             {/* Content Control Bar */}
             <div className="flex items-center justify-between mb-10">
@@ -188,10 +193,10 @@ export default function Dashboard() {
             </div>
 
             {/* VM Grid/List */}
-            <div className={viewMode === 'grid' 
+            <div className={`mobile-stack ${viewMode === 'grid' 
               ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10" 
               : "flex flex-col gap-4"
-            }>
+            }`}>
               {vms.map((vm, i) => (
                 <VMCard
                   key={vm.vmid}
@@ -199,12 +204,46 @@ export default function Dashboard() {
                   healthData={healthMap[vm.vmid]}
                   index={i}
                   viewMode={viewMode}
-                  onClick={() => setSelectedVM(vm)}
+                  onClick={() => setSelectedVm(vm)}
                 />
               ))}
             </div>
+            </div>
           </>
         )}
+
+        {/* Mobile App Bottom Nav */}
+        <div className="app-bottom-nav sm:hidden">
+          <button 
+            onClick={() => setActiveTab('vms')}
+            className={`nav-item ${activeTab === 'vms' ? 'active' : ''}`}
+          >
+            <div className="nav-icon-container">
+              <LayoutGrid size={24} />
+            </div>
+            <span>Ma Flotte</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('stats')}
+            className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}
+          >
+            <div className="nav-icon-container">
+              <TrendingUp size={24} />
+            </div>
+            <span>Stats</span>
+          </button>
+
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="nav-item"
+          >
+            <div className="nav-icon-container">
+              <SettingsIcon size={24} />
+            </div>
+            <span>Réglages</span>
+          </button>
+        </div>
 
         {/* Empty State / Loading */}
         {vms.length === 0 && !error && (

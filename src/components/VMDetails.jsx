@@ -73,11 +73,14 @@ export default function VMDetails({ vm, healthData, onClose, onRefresh }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 md:p-6 bg-black/95 backdrop-blur-3xl animate-enter">
-      <div className="w-full max-w-6xl h-full max-h-full md:max-h-[900px] modal-full-mobile glass rounded-none md:rounded-[3.5rem] overflow-hidden flex flex-col border-0 md:border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 bg-black/95 backdrop-blur-3xl animate-enter">
+      <div className="w-full max-w-6xl h-[92vh] md:h-full max-h-[92vh] md:max-h-[900px] glass rounded-t-[2.5rem] md:rounded-[3.5rem] overflow-hidden flex flex-col border-t md:border border-white/10 shadow-2xl">
         
+        {/* Mobile Handle */}
+        <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-4 mb-2 md:hidden" />
+
         {/* Header Section */}
-        <div className="p-6 md:p-12 border-b border-white/5 bg-slate-900/40 relative">
+        <div className="p-5 md:p-12 border-b border-white/5 bg-slate-900/40 relative">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-6 md:gap-10">
               <div className={`w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-[2rem] flex items-center justify-center border-2 ${
