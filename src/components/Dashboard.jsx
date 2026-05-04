@@ -79,6 +79,10 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  if (!isAuthorized) {
+    return <PasscodeLock onAuthorized={() => setIsAuthorized(true)} />;
+  }
+
   if (loading && vms.length === 0) {
     return (
       <div className="fixed inset-0 z-[10000] bg-black flex flex-col items-center justify-center overflow-hidden">
@@ -101,10 +105,6 @@ export default function Dashboard() {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthorized) {
-    return <PasscodeLock onAuthorized={() => setIsAuthorized(true)} />;
   }
 
   return (

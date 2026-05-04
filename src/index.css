@@ -144,6 +144,7 @@ body {
 /* --- MOBILE APP ENHANCEMENTS --- */
 @media (max-width: 640px) {
   :root {
+    --safe-area-top: env(safe-area-inset-top, 20px);
     --safe-area-bottom: env(safe-area-inset-bottom, 20px);
   }
 
@@ -156,6 +157,7 @@ body {
 
   .main-container {
     padding: 1rem !important;
+    padding-top: calc(0.5rem + var(--safe-area-top)) !important;
     padding-bottom: calc(90px + var(--safe-area-bottom)) !important;
   }
 

@@ -3,7 +3,7 @@ import { formatBytes, formatUptime, formatPercent } from '../utils';
 
 export default function Header({ nodeStatus, loading, onRefresh, onSettings, lastUpdate }) {
   return (
-    <header className="sticky top-0 z-50 glass border-b border-white/5 py-3 sm:py-5 px-4 sm:px-10">
+    <header className="sticky top-0 z-50 glass border-b border-white/5 py-3 sm:py-5 px-4 sm:px-10" style={{ paddingTop: 'calc(var(--safe-area-top, 0px) + 0.75rem)' }}>
       <div className="max-w-[1800px] mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-5">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl overflow-hidden">
