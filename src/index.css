@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-cyan: #00D1FF;
+  --color-brand-mint: #00FF94;
+  
+  --color-slate-950: #000000;
+  --color-slate-900: #0a0a0a;
+  --color-slate-800: #141414;
+  --color-slate-700: #1a1a1a;
+  --color-slate-600: #262626;
+
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+}
+
+/* ============================================ */
+/* Design System - QuentinOtt Chart             */
+/* ============================================ */
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-slate-950);
+  color: #cbd5e1;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Background effects matching quentinott.com */
+.bg-mesh {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background-color: #000000;
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(0, 209, 255, 0.15) 0px, transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(0, 255, 148, 0.05) 0px, transparent 50%);
+}
+
+.bg-grid {
+  background-size: 50px 50px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Glassmorphism refined */
+.glass {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-card {
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(26, 26, 26, 0.6);
+  border-color: rgba(0, 209, 255, 0.2);
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 209, 255, 0.05);
+}
+
+/* Animated Border Gradient */
+.animated-border {
+  position: relative;
+  border-radius: 1.5rem;
+  z-index: 1;
+}
+
+.animated-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(90deg, #00D1FF, #00FF94, #00D1FF);
+  background-size: 200% 200%;
+  animation: border-rotate 6s linear infinite;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.animated-border:hover::before {
+  opacity: 0.4;
+}
+
+@keyframes border-rotate {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Status Badges */
+.status-pill {
+  @apply px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border;
+}
+
+.status-online {
+  background: rgba(0, 255, 148, 0.05);
+  color: #00FF94;
+  border-color: rgba(0, 255, 148, 0.2);
+}
+
+.status-offline {
+  background: rgba(244, 63, 94, 0.05);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+.status-running {
+  background: rgba(0, 209, 255, 0.05);
+  color: #00D1FF;
+  border-color: rgba(0, 209, 255, 0.2);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { 
+  background: rgba(0, 209, 255, 0.2); 
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: #00D1FF; }
+
+/* Custom Utilities */
+.text-gradient {
+  background: linear-gradient(90deg, #00D1FF, #00FF94);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Responsive & Touch Optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .glass-card {
+    border-radius: 1.5rem !important;
+  }
+
+  .modal-full-mobile {
+    margin: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 2s linear infinite;
+}
+
+.animate-enter {
+  animation: enter 0.5s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+}
