@@ -92,7 +92,7 @@ export default function Dashboard() {
           
           {/* Central Icon */}
           <div className="absolute inset-0 flex items-center justify-center p-6">
-             <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain animate-pulse" />
+             <img src="/logoserver.png" alt="Logo" className="w-16 h-16 object-contain animate-pulse" />
           </div>
         </div>
         

@@ -7,7 +7,7 @@ export default function Header({ nodeStatus, loading, onRefresh, onSettings, las
       <div className="max-w-[1800px] mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-5">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl overflow-hidden">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
+            <img src="/logoserver.png" alt="Logo" className="w-full h-full object-contain p-1" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tighter leading-none">

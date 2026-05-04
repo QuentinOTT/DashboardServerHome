@@ -36,7 +36,7 @@ export default function PasscodeLock({ onAuthorized }) {
       {/* App Logo */}
       <div className="mb-16 text-center animate-enter">
         <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl">
-          <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain" />
+          <img src="/logoserver.png" alt="Logo" className="w-16 h-16 object-contain" />
         </div>
         <h1 className="text-2xl font-black text-white tracking-[0.3em] uppercase">ProxDash</h1>
         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">Infrastructure Sécurisée</p>
