@@ -177,7 +177,7 @@ app.get('/api/domotique/status', async (req, res) => {
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      // 1. Priorité Home Assistant
+      // 1. Priorité Home Assistant (Matching existant)
       const haEntity = haStates.find(e => 
         e.entity_id === device.ha_id || 
         (e.attributes?.friendly_name && e.attributes.friendly_name.toLowerCase() === device.name.toLowerCase())
@@ -192,15 +192,9 @@ app.get('/api/domotique/status', async (req, res) => {
           lastEvent: `HA: ${haEntity.state}`
         };
       }
-
-      // 2. Fallback Tapo Cloud
-      const realData = realTapoDevices.find(d => {
-        const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
-        const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
-        return aliasMatch || nameMatch;
-      });
-
-      // 3. Fallback Scan Local
+      
+      // Fallback Tapo/Local pour les appareils déjà dans le registre
+      const realData = realTapoDevices.find(d => d.alias?.toLowerCase() === device.name.toLowerCase());
       const isLocalOnline = await new Promise((resolve) => {
         if (!device.ip) return resolve(false);
         const socket = net.connect(80, device.ip, () => { socket.destroy(); resolve(true); });
@@ -208,21 +202,32 @@ app.get('/api/domotique/status', async (req, res) => {
         socket.on('timeout', () => { socket.destroy(); resolve(false); });
         socket.on('error', () => { resolve(false); });
       });
-      
-      if (realData || isLocalOnline) {
-        return {
-          ...device,
-          status: 'online',
-          battery: device.name.includes("D210") ? "100%" : (realData?.params?.battery_level || device.battery),
-          rssi: realData?.params?.rssi || device.rssi,
-          lastEvent: isLocalOnline ? "Connecté (Local)" : "En ligne"
-        };
-      }
-      
-      return { ...device, status: 'offline', lastEvent: "Hors ligne" };
+
+      return {
+        ...device,
+        status: (realData || isLocalOnline) ? 'online' : 'offline',
+        battery: device.name.includes("D210") ? "100%" : (realData?.params?.battery_level || device.battery),
+        lastEvent: isLocalOnline ? "Local" : (realData ? "Cloud" : "Hors ligne")
+      };
     }));
 
-    res.json({ success: true, devices: updatedDevices });
+    // 2. AUTO-DÉCOUVERTE : Ajouter les entités HA intéressantes qui ne sont pas dans le registre
+    const autoDevices = haStates
+      .filter(e => {
+        const domain = e.entity_id.split('.')[0];
+        return ['light', 'switch', 'sensor', 'binary_sensor'].includes(domain) && 
+               !devices.some(d => d.ha_id === e.entity_id || d.name === e.attributes?.friendly_name);
+      })
+      .slice(0, 10) // Limiter à 10 pour ne pas saturer
+      .map(e => ({
+        name: e.attributes?.friendly_name || e.entity_id,
+        status: e.state === 'unavailable' || e.state === 'off' ? 'offline' : 'online',
+        type: e.entity_id.startsWith('light') ? 'light' : 'sensor',
+        battery: e.attributes?.battery_level || null,
+        lastEvent: `Découvert: ${e.state}`
+      }));
+
+    res.json({ success: true, devices: [...updatedDevices, ...autoDevices] });
   } catch (err) {
     console.error("🔥 Erreur Domotique:", err.message);
     res.status(500).json({ success: false, error: "Erreur de scan" });
