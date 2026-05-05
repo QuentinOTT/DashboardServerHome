@@ -289,25 +289,21 @@ async function getTapoDevices(email, password) {
     const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
     
+    // Log complet de la liste pour trouver la batterie cachée
+    console.log("📦 [DEBUG] Contenu complet du premier appareil :", JSON.stringify(list[0] || {}, null, 2));
+    
     // Enrichir chaque appareil
-    const enrichedList = await Promise.all(list.map(async (d) => {
+    const enrichedList = list.map((d) => {
       try {
         if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
-
-        // Tenter de récupérer le dernier état connu (même si hors ligne)
-        const res = await axios.post(`${baseUrl}?token=${token}`, {
-          method: "passthrough",
-          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_state" }) }
-        });
-
-        const state = JSON.parse(res.data.result?.responseData || "{}");
-        console.log(`📊 [DEBUG] État pour ${d.alias} :`, JSON.stringify(state.result || state.params || state, null, 2));
-
-        return { ...d, params: { ...d.params, ...state.result, ...state.params } };
+        // Fusionner tout ce qu'on trouve
+        return { ...d, params: { ...d.params, ...d.extra_info, ...(typeof d.device_params === 'string' ? JSON.parse(d.device_params) : d.device_params) } };
       } catch (e) { return d; }
-    }));
+    });
+
+    return enrichedList;
 
     return enrichedList;
   } catch (err) {
