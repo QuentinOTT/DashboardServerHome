@@ -325,24 +325,30 @@ app.get('/api/domotique/status', async (req, res) => {
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      const realData = realTapoDevices.find(d => 
-        (d.alias && d.alias.toLowerCase() === device.name.toLowerCase()) || 
-        (d.deviceName && d.deviceName.toLowerCase() === device.name.toLowerCase())
-      );
+      console.log(`🔎 [SCAN] Recherche de correspondance pour : "${device.name}"...`);
+      
+      const realData = realTapoDevices.find(d => {
+        const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
+        const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
+        if (aliasMatch || nameMatch) {
+           console.log(`✅ [FOUND] Trouvé dans Tapo Cloud : "${d.alias || d.deviceName}"`);
+           return true;
+        }
+        return false;
+      });
       
       if (realData) {
-        console.log(`🔗 [MATCH] Liaison réussie pour : ${device.name}`);
-        // Log des params pour vérifier les noms des champs
-        console.log(`📊 [DEBUG] Params pour ${device.name}:`, JSON.stringify(realData.params || {}, null, 2));
-
+        console.log(`🔗 [LINK] Liaison établie pour : ${device.name}`);
         return {
           ...device,
           status: realData.status === 1 ? 'online' : 'offline',
           battery: realData.params?.battery_level || realData.params?.battery_percentage || realData.params?.battery || device.battery,
           rssi: realData.params?.rssi || realData.params?.signal_level || realData.params?.signal_strength || device.rssi,
-          lastEvent: realData.status === 1 ? "En ligne - Prêt" : "Hors ligne"
+          lastEvent: realData.status === 1 ? "Connecté - Prêt" : "Hors ligne"
         };
       }
+      console.log(`❌ [MISS] Aucune correspondance pour "${device.name}" dans les ${realTapoDevices.length} appareils Cloud.`);
+
 
       // Sinon, on fait un simple ping local
       return new Promise((resolve) => {
