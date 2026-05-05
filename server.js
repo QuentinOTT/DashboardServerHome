@@ -273,7 +273,9 @@ app.post('/api/node/power-profile', (req, res) => {
 // --- TAPO CLOUD INTEGRATION ---
 async function getTapoDevices(email, password) {
   try {
-    const loginRes = await axios.post('https://wap.tplinkcloud.com', {
+    const baseUrl = "https://eu-wap.tplinkcloud.com";
+    
+    const loginRes = await axios.post(baseUrl, {
       method: "login",
       params: { appType: "Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
     });
@@ -284,9 +286,8 @@ async function getTapoDevices(email, password) {
       return null;
     }
 
-    const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, { method: "getDeviceList" });
+    const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
-    console.log(`📦 [TAPO] Liste brute reçue (${list.length} appareils)`);
     
     // Enrichir chaque appareil
     const enrichedList = await Promise.all(list.map(async (d) => {
@@ -295,16 +296,16 @@ async function getTapoDevices(email, password) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
 
-        // Tenter plusieurs approches pour les détails
-        const res = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
-          method: "getDeviceInfo",
-          params: { deviceId: d.deviceId }
+        // Tenter de récupérer le dernier état connu (même si hors ligne)
+        const res = await axios.post(`${baseUrl}?token=${token}`, {
+          method: "passthrough",
+          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_state" }) }
         });
 
-        const details = res.data.result || {};
-        console.log(`📊 [DEBUG] Infos détaillées pour ${d.alias} :`, JSON.stringify(details, null, 2));
+        const state = JSON.parse(res.data.result?.responseData || "{}");
+        console.log(`📊 [DEBUG] État pour ${d.alias} :`, JSON.stringify(state.result || state.params || state, null, 2));
 
-        return { ...d, params: { ...d.params, ...details } };
+        return { ...d, params: { ...d.params, ...state.result, ...state.params } };
       } catch (e) { return d; }
     }));
 
