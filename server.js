@@ -275,14 +275,18 @@ async function getTapoDevices(email, password) {
   try {
     const loginRes = await axios.post('https://wap.tplinkcloud.com', {
       method: "login",
-      params: { appType: "TP-Link_Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
+      params: { appType: "Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
     });
 
     const token = loginRes.data.result?.token;
-    if (!token) return null;
+    if (!token) {
+      console.log("❌ [TAPO] Échec login (pas de token)");
+      return null;
+    }
 
     const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
+    console.log(`📦 [TAPO] Liste brute reçue (${list.length} appareils)`);
     
     // Enrichir chaque appareil
     const enrichedList = await Promise.all(list.map(async (d) => {
