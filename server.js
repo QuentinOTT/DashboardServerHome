@@ -313,15 +313,16 @@ app.get('/api/domotique/status', async (req, res) => {
     const registryPath = join(__dirname, 'service-registry.json');
     const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
     const devices = registry.domotique || [];
-    const tapoCreds = registry.settings?.tapo;
+    const tapoEmail = process.env.TAPO_EMAIL || registry.settings?.tapo?.email;
+    const tapoPassword = process.env.TAPO_PASSWORD || registry.settings?.tapo?.password;
     
     let realTapoDevices = [];
-    if (tapoCreds?.email && tapoCreds?.password) {
-      console.log(`☁️  [TAPO] Synchro Cloud pour ${tapoCreds.email}...`);
-      realTapoDevices = await getTapoDevices(tapoCreds.email, tapoCreds.password) || [];
+    if (tapoEmail && tapoPassword) {
+      console.log(`☁️  [TAPO] Synchro Cloud via .env pour ${tapoEmail}...`);
+      realTapoDevices = await getTapoDevices(tapoEmail, tapoPassword) || [];
       console.log(`✅ [TAPO] ${realTapoDevices.length} appareils synchronisés.`);
     } else {
-      console.log(`⚠️  [TAPO] Identifiants manquants dans les réglages.`);
+      console.log(`⚠️  [TAPO] Identifiants absents (Vérifiez votre fichier .env).`);
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
