@@ -333,25 +333,29 @@ app.get('/api/domotique/status', async (req, res) => {
       const realData = realTapoDevices.find(d => {
         const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
         const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
-        if (aliasMatch || nameMatch) {
-           console.log(`✅ [FOUND] Trouvé dans Tapo Cloud : "${d.alias || d.deviceName}"`);
-           return true;
-        }
-        return false;
+        return aliasMatch || nameMatch;
+      });
+
+      // Faire un ping local pour confirmer l'état réel
+      const isLocalOnline = await new Promise((resolve) => {
+        if (!device.ip) return resolve(false);
+        const { exec } = require('child_process');
+        exec(`ping -c 1 -W 1 ${device.ip}`, (error) => resolve(!error));
       });
       
-      if (realData) {
-        console.log(`🔗 [LINK] Liaison établie pour : ${device.name}`);
+      if (realData || isLocalOnline) {
+        console.log(`🔗 [LINK] Liaison établie pour : ${device.name} (Local: ${isLocalOnline ? 'OUI' : 'NON'})`);
         return {
           ...device,
-          status: realData.status === 1 ? 'online' : 'offline',
-          battery: realData.params?.battery_level || realData.params?.battery_percentage || realData.params?.battery || device.battery,
-          rssi: realData.params?.rssi || realData.params?.signal_level || realData.params?.signal_strength || device.rssi,
-          lastEvent: realData.status === 1 ? "Connecté - Prêt" : "Hors ligne"
+          status: isLocalOnline ? 'online' : (realData?.status === 1 ? 'online' : 'offline'),
+          battery: realData?.params?.battery_level || realData?.params?.battery_percentage || device.battery,
+          rssi: realData?.params?.rssi || realData?.params?.signal_level || device.rssi,
+          lastEvent: isLocalOnline ? "Connecté (Local)" : "En veille (Cloud)"
         };
       }
-      console.log(`❌ [MISS] Aucune correspondance pour "${device.name}" dans les ${realTapoDevices.length} appareils Cloud.`);
-
+      
+      return { ...device, status: 'offline', lastEvent: "Injoignable" };
+    }));
 
       // Sinon, on fait un simple ping local
       return new Promise((resolve) => {
