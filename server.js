@@ -18,6 +18,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- CONFIGURATION HOTE ---
+const SSH_HOST = "root@192.168.1.100"; // Ton hôte Proxmox pour les commandes directes (énergie/temp)
+
 // Logger de debug
 // Logger de debug avec statut
 app.use((req, res, next) => {
@@ -244,8 +247,6 @@ app.get('/api/vms', async (req, res) => {
 
 // --- GENERIC STATUS (Supports both QEMU & LXC) ---
 // --- POWER PROFILE MANAGEMENT (VIA SSH BRIDGE) ---
-const SSH_HOST = "root@192.168.1.100"; // Ton hôte Proxmox
-
 app.get('/api/node/power-profile', (req, res) => {
   try {
     const governor = execSync(`ssh ${SSH_HOST} 'cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'`, { encoding: 'utf8' }).trim();
