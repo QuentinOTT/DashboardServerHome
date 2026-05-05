@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info, Zap } from 'lucide-react';
+import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info, Zap, Home } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function RegistryEditor({ onClose, onSaveSuccess }) {
