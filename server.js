@@ -286,10 +286,15 @@ async function getTapoDevices(email, password) {
       return null;
     }
 
-    const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { method: "getDeviceList" });
-    const list = devicesRes.data.result?.deviceList || [];
+    const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { 
+      method: "getDeviceList",
+      params: { index: 0, count: 20 }
+    });
     
-    // Enrichir chaque appareil
+    const list = devicesRes.data.result?.deviceList || [];
+    if (devicesRes.data.error_code !== 0) {
+      console.log(`⚠️ [TAPO] Erreur Cloud Code: ${devicesRes.data.error_code}`);
+    }
     const enrichedList = await Promise.all(list.map(async (d) => {
       try {
         if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
