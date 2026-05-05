@@ -269,6 +269,37 @@ app.post('/api/node/power-profile', (req, res) => {
   }
 });
 
+// --- DOMOTIQUE STATUS (PING) ---
+app.get('/api/domotique/status', async (req, res) => {
+  try {
+    const registry = JSON.parse(readFileSync(join(__dirname, 'service-registry.json'), 'utf8'));
+    const devices = registry.domotique || [];
+    
+    const updatedDevices = await Promise.all(devices.map(async (device) => {
+      return new Promise((resolve) => {
+        const socket = net.connect(80, device.ip, () => {
+          socket.destroy();
+          resolve({ ...device, status: 'online' });
+        });
+        
+        socket.setTimeout(2000);
+        socket.on('timeout', () => {
+          socket.destroy();
+          resolve({ ...device, status: 'offline' });
+        });
+        
+        socket.on('error', () => {
+          resolve({ ...device, status: 'offline' });
+        });
+      });
+    }));
+
+    res.json({ success: true, devices: updatedDevices });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Erreur lors du scan domotique" });
+  }
+});
+
 app.get('/api/vms/:vmid', async (req, res) => {
   try {
     const { vmid } = req.params;

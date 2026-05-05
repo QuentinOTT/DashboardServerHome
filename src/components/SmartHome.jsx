@@ -1,8 +1,28 @@
 import { useState } from 'react';
 import { Home, Battery, Bell, Clock, Info, Plus, Wifi, Power, Lightbulb, ThermometerSun, ShieldCheck } from 'lucide-react';
 
-export default function SmartHome({ devices }) {
+export default function SmartHome({ devices: initialDevices }) {
   const [activeFilter, setActiveFilter] = useState('all');
+  const [devices, setDevices] = useState(initialDevices);
+  const [loading, setLoading] = useState(false);
+
+  const refreshStatus = async () => {
+    try {
+      const res = await fetch('/api/domotique/status');
+      const data = await res.json();
+      if (data.success) {
+        setDevices(data.devices);
+      }
+    } catch (err) {
+      console.error("Erreur domotique status:", err);
+    }
+  };
+
+  useEffect(() => {
+    refreshStatus();
+    const interval = setInterval(refreshStatus, 30000); // Rafraîchir toutes les 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const filters = [
     { id: 'all', label: 'Tous', icon: Home },
