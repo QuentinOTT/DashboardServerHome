@@ -11,7 +11,6 @@ import { readFileSync, writeFile, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
-import { execSync, exec } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -20,13 +19,23 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Protection contre les crashs
+process.on('uncaughtException', (err) => {
+  console.error('🔥 CRASH ÉVITÉ (Uncaught Exception):', err.message);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 CRASH ÉVITÉ (Unhandled Rejection):', reason);
+});
+
 // Configuration Proxmox API
 const proxmoxApi = axios.create({
   baseURL: process.env.PROXMOX_HOST,
   headers: {
     'Authorization': `PVEAPIToken=${process.env.PROXMOX_TOKEN_ID}=${process.env.PROXMOX_TOKEN_SECRET}`
   },
-  httpsAgent: new https.Agent({ rejectUnauthorized: false })
+  httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+  timeout: 5000
 });
 
 const PROXMOX_NODE = process.env.PROXMOX_NODE || 'vps';
@@ -40,55 +49,11 @@ async function getHADevices() {
   try {
     const res = await axios.get(`${url}/api/states`, {
       headers: { Authorization: `Bearer ${token}` },
-      timeout: 2000
+      timeout: 3000
     });
     return res.data;
   } catch (err) {
     console.error("❌ Erreur Home Assistant:", err.message);
-    return null;
-  }
-}
-
-// --- TAPO CLOUD INTEGRATION ---
-async function getTapoDevices(email, password) {
-  try {
-    const baseUrl = "https://eu-wap.tplinkcloud.com";
-    
-    const loginRes = await axios.post(baseUrl, {
-      method: "login",
-      params: { appType: "Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
-    });
-
-    const token = loginRes.data.result?.token;
-    if (!token) return null;
-
-    const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { 
-      method: "getDeviceList",
-      params: { index: 0, count: 20 }
-    });
-    
-    const list = devicesRes.data.result?.deviceList || [];
-    
-    // Enrichir chaque appareil
-    const enrichedList = await Promise.all(list.map(async (d) => {
-      try {
-        if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
-          d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
-        }
-
-        const res = await axios.post(`${baseUrl}?token=${token}`, {
-          method: "passthrough",
-          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_info", params: {} }) }
-        }, { timeout: 2000 });
-
-        const state = JSON.parse(res.data.result?.responseData || "{}");
-        return { ...d, params: { ...d.params, ...state.result, ...state.params } };
-      } catch (e) { return d; }
-    }));
-
-    return enrichedList;
-  } catch (err) {
-    console.error("❌ Erreur Tapo Cloud:", err.message);
     return null;
   }
 }
@@ -127,23 +92,18 @@ app.get('/api/vms', async (req, res) => {
 });
 
 app.get('/api/registry', (req, res) => {
-  const path = join(__dirname, 'service-registry.json');
-  res.json(JSON.parse(readFileSync(path, 'utf8')));
-});
-
-app.post('/api/registry', (req, res) => {
-  const path = join(__dirname, 'service-registry.json');
-  writeFile(path, JSON.stringify(req.body, null, 2), (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true });
-  });
+  try {
+    const path = join(__dirname, 'service-registry.json');
+    res.json(JSON.parse(readFileSync(path, 'utf8')));
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lecture registre" });
+  }
 });
 
 app.get('/api/health/:vmid', async (req, res) => {
   try {
     const { vmid } = req.params;
-    let type = 'qemu';
-    if (parseInt(vmid) >= 1000) type = 'lxc'; 
+    let type = parseInt(vmid) >= 500 ? 'lxc' : 'qemu';
     
     try {
       const status = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/${type}/${vmid}/status/current`);
@@ -165,7 +125,6 @@ app.get('/api/domotique/status', async (req, res) => {
     const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
     const devices = registry.domotique || [];
     
-    // 1. HOME ASSISTANT (Ultra-rapide)
     const haStates = await getHADevices() || [];
     
     const updatedDevices = devices.map(device => {
@@ -177,51 +136,45 @@ app.get('/api/domotique/status', async (req, res) => {
       if (haEntity) {
         return {
           ...device,
-          status: haEntity.state === 'unavailable' || haEntity.state === 'off' ? 'offline' : 'online',
+          status: (haEntity.state === 'unavailable' || haEntity.state === 'off') ? 'offline' : 'online',
           battery: haEntity.attributes?.battery_level || haEntity.attributes?.battery || device.battery,
           lastEvent: `HA: ${haEntity.state}`
         };
       }
-      return { ...device, status: 'offline', lastEvent: "Non lié à HA" };
+      return { ...device, status: 'offline', lastEvent: "Non lié" };
     });
 
-    // 2. AUTO-DÉCOUVERTE (Limité aux lumières)
     const autoDevices = haStates
       .filter(e => {
         const domain = e.entity_id.split('.')[0];
-        return (domain === 'light' || domain === 'switch') && 
+        return (domain === 'light' || domain === 'switch' || domain === 'binary_sensor') && 
                !devices.some(d => d.ha_id === e.entity_id || d.name === e.attributes?.friendly_name);
       })
-      .slice(0, 8)
+      .slice(0, 10)
       .map(e => ({
         name: e.attributes?.friendly_name || e.entity_id,
-        status: e.state === 'off' ? 'offline' : 'online',
-        type: 'light',
+        status: (e.state === 'unavailable' || e.state === 'off') ? 'offline' : 'online',
+        type: e.entity_id.startsWith('light') ? 'light' : 'sensor',
         lastEvent: "Découvert"
       }));
 
     res.json({ success: true, devices: [...updatedDevices, ...autoDevices] });
   } catch (err) {
     console.error("🔥 Erreur Domotique:", err.message);
-    res.status(500).json({ success: false, error: "Erreur" });
+    res.status(500).json({ success: false, error: "Erreur scan" });
   }
 });
 
-app.get('/api/vms/:vmid', async (req, res) => {
-  try {
-    const { vmid } = req.params;
-    let data;
-    try {
-      const res = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/current`);
-      data = res.data.data;
-    } catch (e) {
-      const res = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/lxc/${vmid}/status/current`);
-      data = res.data.data;
-    }
-    res.json({ success: true, data });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+app.get('/', (req, res) => {
+  res.json({ status: 'QuentinOtt Dashboard Backend Active' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur Backend QuentinOtt actif sur le port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Serveur Backend actif sur le port ${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Le port ${PORT} est déjà utilisé.`);
+  } else {
+    console.error('❌ Erreur Serveur:', err.message);
+  }
 });
