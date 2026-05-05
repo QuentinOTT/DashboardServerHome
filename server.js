@@ -295,11 +295,16 @@ async function getTapoDevices(email, password) {
         // Récupérer les détails (pour la batterie)
         const detailsRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
           method: "passthrough",
-          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_info" }) }
+          params: { 
+            deviceId: d.deviceId, 
+            requestData: JSON.stringify({ method: "get_device_info" }) 
+          }
         });
 
+        console.log(`📡 [RAW] Réponse Cloud pour ${d.alias}:`, detailsRes.data.result?.responseData || "VIDE");
+
         const details = JSON.parse(detailsRes.data.result?.responseData || "{}");
-        return { ...d, params: { ...d.params, ...details.result } };
+        return { ...d, params: { ...d.params, ...details.result, ...details.params } };
       } catch (e) { return d; }
     }));
 
