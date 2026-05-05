@@ -289,8 +289,8 @@ async function getTapoDevices(email, password) {
     const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
     
-    // Log complet de la liste pour trouver la batterie cachée
-    console.log("📦 [DEBUG] Contenu complet du premier appareil :", JSON.stringify(list[0] || {}, null, 2));
+    // Log TOTAL pour ne rien rater
+    console.log("📦 [DEBUG] Liste complète des appareils :", JSON.stringify(list, null, 2));
     
     // Enrichir chaque appareil
     const enrichedList = list.map((d) => {
