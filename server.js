@@ -11,7 +11,7 @@ import { readFileSync, writeFile, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -337,7 +337,6 @@ app.get('/api/domotique/status', async (req, res) => {
       // Vérification réseau locale via Socket (plus fiable que Ping)
       const isLocalOnline = await new Promise((resolve) => {
         if (!device.ip) return resolve(false);
-        const net = require('net');
         const socket = net.connect(80, device.ip, () => {
           socket.destroy();
           resolve(true);
