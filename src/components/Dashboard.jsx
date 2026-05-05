@@ -189,6 +189,13 @@ export default function Dashboard() {
                     >
                       <Zap size={14} /> Énergie
                     </button>
+                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-brand-cyan transition-all"
+                    >
+                      <SettingsIcon size={14} /> Réglages
+                    </button>
                   </div>
 
                   <button
