@@ -158,26 +158,17 @@ app.get('/api/health/:vmid', async (req, res) => {
   }
 });
 
-// --- DOMOTIQUE STATUS (REAL & PING) ---
+// --- DOMOTIQUE STATUS (SPEED OPTIMIZED) ---
 app.get('/api/domotique/status', async (req, res) => {
   try {
     const registryPath = join(__dirname, 'service-registry.json');
     const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
     const devices = registry.domotique || [];
-    const tapoEmail = process.env.TAPO_EMAIL || registry.settings?.tapo?.email;
-    const tapoPassword = process.env.TAPO_PASSWORD || registry.settings?.tapo?.password;
     
-    // 1. Récupérer les données Home Assistant (Priorité)
+    // 1. HOME ASSISTANT (Ultra-rapide)
     const haStates = await getHADevices() || [];
     
-    // 2. Récupérer les données Tapo Cloud (Fallback)
-    let realTapoDevices = [];
-    if (tapoEmail && tapoPassword) {
-      realTapoDevices = await getTapoDevices(tapoEmail, tapoPassword) || [];
-    }
-
-    const updatedDevices = await Promise.all(devices.map(async (device) => {
-      // 1. Priorité Home Assistant (Matching existant)
+    const updatedDevices = devices.map(device => {
       const haEntity = haStates.find(e => 
         e.entity_id === device.ha_id || 
         (e.attributes?.friendly_name && e.attributes.friendly_name.toLowerCase() === device.name.toLowerCase())
@@ -188,49 +179,31 @@ app.get('/api/domotique/status', async (req, res) => {
           ...device,
           status: haEntity.state === 'unavailable' || haEntity.state === 'off' ? 'offline' : 'online',
           battery: haEntity.attributes?.battery_level || haEntity.attributes?.battery || device.battery,
-          rssi: haEntity.attributes?.rssi || device.rssi,
           lastEvent: `HA: ${haEntity.state}`
         };
       }
-      
-      // Fallback Tapo/Local pour les appareils déjà dans le registre
-      const realData = realTapoDevices.find(d => d.alias?.toLowerCase() === device.name.toLowerCase());
-      const isLocalOnline = await new Promise((resolve) => {
-        if (!device.ip) return resolve(false);
-        const socket = net.connect(80, device.ip, () => { socket.destroy(); resolve(true); });
-        socket.setTimeout(800);
-        socket.on('timeout', () => { socket.destroy(); resolve(false); });
-        socket.on('error', () => { resolve(false); });
-      });
+      return { ...device, status: 'offline', lastEvent: "Non lié à HA" };
+    });
 
-      return {
-        ...device,
-        status: (realData || isLocalOnline) ? 'online' : 'offline',
-        battery: device.name.includes("D210") ? "100%" : (realData?.params?.battery_level || device.battery),
-        lastEvent: isLocalOnline ? "Local" : (realData ? "Cloud" : "Hors ligne")
-      };
-    }));
-
-    // 2. AUTO-DÉCOUVERTE : Ajouter les entités HA intéressantes qui ne sont pas dans le registre
+    // 2. AUTO-DÉCOUVERTE (Limité aux lumières)
     const autoDevices = haStates
       .filter(e => {
         const domain = e.entity_id.split('.')[0];
-        return ['light', 'switch', 'sensor', 'binary_sensor'].includes(domain) && 
+        return (domain === 'light' || domain === 'switch') && 
                !devices.some(d => d.ha_id === e.entity_id || d.name === e.attributes?.friendly_name);
       })
-      .slice(0, 10) // Limiter à 10 pour ne pas saturer
+      .slice(0, 8)
       .map(e => ({
         name: e.attributes?.friendly_name || e.entity_id,
-        status: e.state === 'unavailable' || e.state === 'off' ? 'offline' : 'online',
-        type: e.entity_id.startsWith('light') ? 'light' : 'sensor',
-        battery: e.attributes?.battery_level || null,
-        lastEvent: `Découvert: ${e.state}`
+        status: e.state === 'off' ? 'offline' : 'online',
+        type: 'light',
+        lastEvent: "Découvert"
       }));
 
     res.json({ success: true, devices: [...updatedDevices, ...autoDevices] });
   } catch (err) {
     console.error("🔥 Erreur Domotique:", err.message);
-    res.status(500).json({ success: false, error: "Erreur de scan" });
+    res.status(500).json({ success: false, error: "Erreur" });
   }
 });
 
