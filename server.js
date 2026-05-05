@@ -24,7 +24,7 @@ app.use(express.json());
 process.on('uncaughtException', (err) => console.error('🔥 Erreur:', err.message));
 
 const proxmoxApi = axios.create({
-  baseURL: `${process.env.PROXMOX_HOST}/api2/json`,
+  baseURL: `${process.env.PROXMOX_HOST.replace(/\/$/, '')}/api2/json`,
   headers: { 'Authorization': `PVEAPIToken=${process.env.PROXMOX_TOKEN_ID}=${process.env.PROXMOX_TOKEN_SECRET}` },
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   timeout: 5000
