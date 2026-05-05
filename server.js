@@ -307,8 +307,6 @@ async function getTapoDevices(email, password) {
     }));
 
     return enrichedList;
-
-    return enrichedList;
   } catch (err) {
     console.error("❌ Erreur Tapo Cloud:", err.message);
     return null;
