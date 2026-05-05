@@ -99,14 +99,10 @@ app.get('/api/node/status', async (req, res) => {
   try {
     const { data } = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/status`);
     
-    // Tentative de récupération des températures via sensors
+    // Tentative de récupération des températures via sensors (sur l'hôte via SSH)
     let temps = null;
     try {
-      let sensorsPath = 'sensors';
-      if (existsSync('/usr/bin/sensors')) sensorsPath = '/usr/bin/sensors';
-      else if (existsSync('/bin/sensors')) sensorsPath = '/bin/sensors';
-
-      const sensorsOutput = execSync(`${sensorsPath} -j`, { encoding: 'utf8', timeout: 2000 });
+      const sensorsOutput = execSync(`ssh ${SSH_HOST} 'sensors -j'`, { encoding: 'utf8', timeout: 3000 });
       const sensorsData = JSON.parse(sensorsOutput);
       
       // Fonction récursive pour trouver n'importe quelle valeur "tempX_input"
@@ -124,12 +120,10 @@ app.get('/api/node/status', async (req, res) => {
       temps = findTemp(sensorsData);
       
       if (temps) {
-        console.log(`✅ [OK] Température CPU trouvée : ${temps}°C`);
-      } else {
-        console.log(`⚠️ [WARN] Sensors a répondu mais aucune température n'a été trouvée dans le JSON.`);
+        console.log(`✅ [HOST] Température détectée : ${temps}°C`);
       }
     } catch (e) {
-      console.log(`❌ [ERROR] Échec de l'exécution de sensors : ${e.message}`);
+      console.log(`⚠️ [WARN] Impossible de lire les températures hôte via SSH.`);
     }
 
     res.json({ success: true, data: { ...data.data, cpuTemp: temps } });
@@ -249,26 +243,28 @@ app.get('/api/vms', async (req, res) => {
 });
 
 // --- GENERIC STATUS (Supports both QEMU & LXC) ---
-// --- POWER PROFILE MANAGEMENT ---
+// --- POWER PROFILE MANAGEMENT (VIA SSH BRIDGE) ---
+const SSH_HOST = "root@192.168.1.100"; // Ton hôte Proxmox
+
 app.get('/api/node/power-profile', (req, res) => {
   try {
-    const governor = execSync('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', { encoding: 'utf8' }).trim();
-    const available = execSync('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors', { encoding: 'utf8' }).trim().split(' ');
+    const governor = execSync(`ssh ${SSH_HOST} 'cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'`, { encoding: 'utf8' }).trim();
+    const available = execSync(`ssh ${SSH_HOST} 'cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors'`, { encoding: 'utf8' }).trim().split(' ');
     res.json({ success: true, data: { current: governor, available } });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Impossible de lire le profil d'énergie. Votre conteneur n'a peut-être pas les droits." });
+    res.status(500).json({ success: false, error: "Impossible de lire le profil via SSH." });
   }
 });
 
 app.post('/api/node/power-profile', (req, res) => {
   try {
     const { profile } = req.body;
-    // Commande pour appliquer le profil à TOUS les coeurs
-    execSync(`echo "${profile}" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`);
-    console.log(`⚡ Profil d'énergie mis à jour : ${profile}`);
+    // Commande envoyée à l'hôte via la clé SSH
+    execSync(`ssh ${SSH_HOST} 'echo "${profile}" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor'`);
+    console.log(`⚡ [HOST] Profil d'énergie mis à jour : ${profile}`);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Échec de la modification du profil. Droits insuffisants." });
+    res.status(500).json({ success: false, error: "Échec de la commande SSH vers l'hôte." });
   }
 });
 
