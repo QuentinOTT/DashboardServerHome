@@ -11,6 +11,7 @@ import { readFileSync, writeFile } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
+import { execSync } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -97,7 +98,22 @@ app.post('/api/registry', (req, res) => {
 app.get('/api/node/status', async (req, res) => {
   try {
     const { data } = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/status`);
-    res.json({ success: true, data: data.data });
+    
+    // Tentative de récupération des températures via sensors (si sur le même hôte)
+    let temps = null;
+    try {
+      const sensorsOutput = execSync('sensors -j', { encoding: 'utf8' });
+      const sensorsData = JSON.parse(sensorsOutput);
+      // Extraction de la température package ou core 0
+      const coretemp = sensorsData['coretemp-isa-0000'];
+      if (coretemp) {
+        temps = coretemp['Package id 0']?.['temp1_input'] || coretemp['Core 0']?.['temp2_input'];
+      }
+    } catch (e) {
+      // Silencieusement ignorer si sensors n'est pas dispo
+    }
+
+    res.json({ success: true, data: { ...data.data, cpuTemp: temps } });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 

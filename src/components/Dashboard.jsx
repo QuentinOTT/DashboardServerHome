@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [vms, setVms] = useState([]);
   const [nodeStatus, setNodeStatus] = useState(null);
   const [healthMap, setHealthMap] = useState({});
+  const [registry, setRegistry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -28,20 +29,23 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [vmsRes, nodeRes] = await Promise.all([
+      const [vmsRes, nodeRes, regRes] = await Promise.all([
         fetch('/api/vms'),
         fetch('/api/node/status'),
+        fetch('/api/registry'),
       ]);
 
-      if (!vmsRes.ok || !nodeRes.ok) throw new Error('Echec de synchronisation backend');
+      if (!vmsRes.ok || !nodeRes.ok || !regRes.ok) throw new Error('Echec de synchronisation backend');
 
       const vmsData = await vmsRes.json();
       const nodeData = await nodeRes.json();
+      const regData = await regRes.json();
 
       if (!vmsData.success) throw new Error(vmsData.error);
 
       setVms(vmsData.data);
       setNodeStatus(nodeData.data);
+      setRegistry(regData.data);
       setConnected(true);
       setLastUpdate(new Date());
 
@@ -144,7 +148,7 @@ export default function Dashboard() {
         {vms.length > 0 && (
           <>
             <div className={`${activeTab === 'stats' ? 'block' : 'hidden sm:block'}`}>
-               <StatsCards vms={vms} nodeStatus={nodeStatus} />
+               <StatsCards vms={vms} nodeStatus={nodeStatus} powerSettings={registry?.settings?.power} />
             </div>
 
             <div className={`${activeTab === 'vms' ? 'block' : 'hidden sm:block'}`}>

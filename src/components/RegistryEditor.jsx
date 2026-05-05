@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info } from 'lucide-react';
+import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function RegistryEditor({ onClose, onSaveSuccess }) {
@@ -201,6 +201,88 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
             </div>
           ))}
 
+          {/* Power Management Section */}
+          <div className="space-y-6 pt-12 border-t border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                <Zap size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase">Gestion de l'Énergie</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Estimation des coûts & consommation</p>
+              </div>
+              <div className="ml-auto flex items-center gap-3">
+                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Activer le suivi</span>
+                 <button 
+                  onClick={() => {
+                    const newRegistry = { ...registry };
+                    newRegistry.settings.power.enabled = !newRegistry.settings.power.enabled;
+                    setRegistry(newRegistry);
+                  }}
+                  className={`w-12 h-6 rounded-full transition-all relative ${registry.settings?.power?.enabled ? 'bg-amber-500' : 'bg-slate-800'}`}
+                 >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${registry.settings?.power?.enabled ? 'right-1' : 'left-1'}`} />
+                 </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 rounded-[2rem] bg-slate-900/30 border border-white/5">
+              <div className="flex flex-col gap-2">
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Conso. Idle (Watts)</span>
+                <input 
+                  type="number" 
+                  value={registry.settings?.power?.idleWatts || 0} 
+                  onChange={(e) => {
+                    const newRegistry = { ...registry };
+                    newRegistry.settings.power.idleWatts = parseInt(e.target.value);
+                    setRegistry(newRegistry);
+                  }}
+                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-amber-500/50 focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Conso. Max (Watts)</span>
+                <input 
+                  type="number" 
+                  value={registry.settings?.power?.maxWatts || 0} 
+                  onChange={(e) => {
+                    const newRegistry = { ...registry };
+                    newRegistry.settings.power.maxWatts = parseInt(e.target.value);
+                    setRegistry(newRegistry);
+                  }}
+                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-amber-500/50 focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Prix du kWh (€)</span>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  value={registry.settings?.power?.kwhPrice || 0} 
+                  onChange={(e) => {
+                    const newRegistry = { ...registry };
+                    newRegistry.settings.power.kwhPrice = parseFloat(e.target.value);
+                    setRegistry(newRegistry);
+                  }}
+                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-amber-500/50 focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Devise</span>
+                <input 
+                  type="text" 
+                  value={registry.settings?.power?.currency || '€'} 
+                  onChange={(e) => {
+                    const newRegistry = { ...registry };
+                    newRegistry.settings.power.currency = e.target.value;
+                    setRegistry(newRegistry);
+                  }}
+                  className="bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-amber-500/50 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="p-8 rounded-3xl bg-brand-cyan/5 border border-brand-cyan/10 flex items-start gap-5">
             <Info className="text-brand-cyan shrink-0" size={24} />
             <div>
@@ -208,6 +290,7 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                  Ces réglages sont sauvegardés dans le fichier <code className="text-brand-cyan">service-registry.json</code> sur votre serveur. 
                  Ils permettent au dashboard de savoir quels ports tester et quels liens afficher pour vos sites web.
+                 La section énergie permet d'estimer votre consommation électrique basée sur la charge CPU.
                </p>
             </div>
           </div>

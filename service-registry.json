@@ -32,5 +32,14 @@
         }
       ]
     }
+  },
+  "settings": {
+    "power": {
+      "enabled": true,
+      "idleWatts": 45,
+      "maxWatts": 250,
+      "kwhPrice": 0.22,
+      "currency": "€"
+    }
   }
 }
