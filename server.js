@@ -3,7 +3,7 @@
  * Centralized Home Assistant + Tapo Cloud + Proxmox API
  */
 
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -14,6 +14,8 @@ import { fileURLToPath } from 'url';
 import https from 'https';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '.env') });
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -24,7 +26,7 @@ app.use(express.json());
 process.on('uncaughtException', (err) => console.error('🔥 Erreur:', err.message));
 
 const proxmoxApi = axios.create({
-  baseURL: `${process.env.PROXMOX_HOST.replace(/\/$/, '')}/api2/json`,
+  baseURL: `${process.env.PROXMOX_HOST ? process.env.PROXMOX_HOST.replace(/\/$/, '') : ''}/api2/json`,
   headers: { 'Authorization': `PVEAPIToken=${process.env.PROXMOX_TOKEN_ID}=${process.env.PROXMOX_TOKEN_SECRET}` },
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   timeout: 5000
@@ -79,15 +81,25 @@ app.get('/api/domotique/status', async (req, res) => {
     const updatedDevices = devices.map(device => {
       const ha = haStates.find(e => e.entity_id === device.ha_id || (e.attributes?.friendly_name && e.attributes.friendly_name.toLowerCase() === device.name.toLowerCase()));
       if (ha) {
-        return { ...device, status: ha.state === 'off' ? 'offline' : 'online', battery: ha.attributes?.battery_level || device.battery, lastEvent: `HA: ${ha.state}` };
+        return { ...device, status: ha.state === 'off' || ha.state === 'unavailable' ? 'offline' : 'online', battery: ha.attributes?.battery_level || device.battery, lastEvent: `HA: ${ha.state}` };
       }
       return { ...device, status: 'offline', lastEvent: "Non lié" };
     });
 
+    const allowedDomains = ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'climate'];
     const auto = haStates
-      .filter(e => ['light', 'switch'].includes(e.entity_id.split('.')[0]) && !devices.some(d => d.ha_id === e.entity_id))
-      .slice(0, 8)
-      .map(e => ({ name: e.attributes?.friendly_name || e.entity_id, status: e.state === 'off' ? 'offline' : 'online', type: 'light', lastEvent: "Découvert" }));
+      .filter(e => {
+        const domain = e.entity_id.split('.')[0];
+        return allowedDomains.includes(domain) && !devices.some(d => d.ha_id === e.entity_id);
+      })
+      .slice(0, 15)
+      .map(e => ({ 
+        name: e.attributes?.friendly_name || e.entity_id, 
+        status: e.state === 'off' || e.state === 'unavailable' ? 'offline' : 'online', 
+        type: e.entity_id.split('.')[0] === 'light' ? 'light' : 'sensor', 
+        battery: e.attributes?.battery_level || null,
+        lastEvent: "Découvert (HA)" 
+      }));
 
     res.json({ success: true, devices: [...updatedDevices, ...auto] });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
