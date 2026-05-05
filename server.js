@@ -338,11 +338,13 @@ app.get('/api/domotique/status', async (req, res) => {
       
       if (realData) {
         console.log(`🔗 [MATCH] Liaison réussie pour : ${device.name}`);
+        console.log(`📊 [DEBUG] Données brutes de ${device.name}:`, JSON.stringify(realData.params || {}, null, 2));
+        
         return {
           ...device,
           status: realData.status === 1 ? 'online' : 'offline',
-          battery: realData.params?.battery_level || device.battery,
-          rssi: realData.params?.rssi || device.rssi,
+          battery: realData.params?.battery_level || realData.params?.battery_percentage || device.battery,
+          rssi: realData.params?.rssi || realData.params?.signal_level || device.rssi,
           lastEvent: realData.status === 1 ? "En ligne - Prêt" : "Hors ligne"
         };
       }
