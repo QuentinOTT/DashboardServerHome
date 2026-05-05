@@ -249,6 +249,29 @@ app.get('/api/vms', async (req, res) => {
 });
 
 // --- GENERIC STATUS (Supports both QEMU & LXC) ---
+// --- POWER PROFILE MANAGEMENT ---
+app.get('/api/node/power-profile', (req, res) => {
+  try {
+    const governor = execSync('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', { encoding: 'utf8' }).trim();
+    const available = execSync('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors', { encoding: 'utf8' }).trim().split(' ');
+    res.json({ success: true, data: { current: governor, available } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Impossible de lire le profil d'énergie. Votre conteneur n'a peut-être pas les droits." });
+  }
+});
+
+app.post('/api/node/power-profile', (req, res) => {
+  try {
+    const { profile } = req.body;
+    // Commande pour appliquer le profil à TOUS les coeurs
+    execSync(`echo "${profile}" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`);
+    console.log(`⚡ Profil d'énergie mis à jour : ${profile}`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Échec de la modification du profil. Droits insuffisants." });
+  }
+});
+
 app.get('/api/vms/:vmid', async (req, res) => {
   try {
     const { vmid } = req.params;
