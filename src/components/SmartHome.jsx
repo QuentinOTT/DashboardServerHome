@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home, Battery, Bell, Clock, Info, Plus, Wifi, Power, Lightbulb, ThermometerSun, ShieldCheck } from 'lucide-react';
 
 export default function SmartHome({ devices: initialDevices }) {
