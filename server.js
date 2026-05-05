@@ -292,20 +292,30 @@ async function getTapoDevices(email, password) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
 
-        // Récupérer les détails (pour la batterie)
-        const detailsRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
-          method: "passthrough",
-          params: { 
-            deviceId: d.deviceId, 
-            requestData: JSON.stringify({ method: "get_device_info" }) 
+        // Tenter plusieurs méthodes pour les détails
+        let details = {};
+        const methods = ["get_device_info", "get_device_state", "get_status"];
+        
+        for (const m of methods) {
+          const res = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
+            method: "passthrough",
+            params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: m }) }
+          });
+          
+          if (res.data.result?.responseData) {
+            const parsed = JSON.parse(res.data.result.responseData);
+            details = { ...details, ...(parsed.result || parsed.params || parsed) };
+            if (Object.keys(details).length > 2) break; // Si on a trouvé des infos, on s'arrête
+          } else {
+            console.log(`❌ [DEBUG] Méthode ${m} a échoué pour ${d.alias} (Code: ${res.data.error_code})`);
           }
-        });
+        }
 
-        console.log(`📡 [RAW] Réponse Cloud pour ${d.alias}:`, detailsRes.data.result?.responseData || "VIDE");
-
-        const details = JSON.parse(detailsRes.data.result?.responseData || "{}");
-        return { ...d, params: { ...d.params, ...details.result, ...details.params } };
-      } catch (e) { return d; }
+        return { ...d, params: { ...d.params, ...details } };
+      } catch (e) { 
+        console.error(`🔥 [FATAL] Erreur sur ${d.alias}:`, e.message);
+        return d; 
+      }
     }));
 
     return enrichedList;
