@@ -334,26 +334,28 @@ app.get('/api/domotique/status', async (req, res) => {
         return aliasMatch || nameMatch;
       });
 
-      // Vérification réseau locale via Socket (plus fiable que Ping)
-      const isLocalOnline = await new Promise((resolve) => {
-        if (!device.ip) return resolve(false);
-        const socket = net.connect(80, device.ip, () => {
-          socket.destroy();
-          resolve(true);
-        });
-        socket.setTimeout(1500);
-        socket.on('timeout', () => { socket.destroy(); resolve(false); });
-        socket.on('error', () => { resolve(false); });
-      });
+      // Scan local multi-ports (80, 443, 554)
+      let isLocalOnline = false;
+      if (device.ip) {
+        for (const port of [80, 443, 554]) {
+          const status = await new Promise((resolve) => {
+            const socket = net.connect(port, device.ip, () => { socket.destroy(); resolve(true); });
+            socket.setTimeout(800);
+            socket.on('timeout', () => { socket.destroy(); resolve(false); });
+            socket.on('error', () => { resolve(false); });
+          });
+          if (status) { isLocalOnline = true; break; }
+        }
+      }
       
       if (realData || isLocalOnline) {
-        console.log(`🔗 [LINK] ${device.name} -> ${isLocalOnline ? 'ONLINE (Local)' : 'ONLINE (Cloud)'}`);
+        console.log(`🔗 [LINK] ${device.name} -> ${isLocalOnline ? 'OK (Local)' : 'OK (Cloud)'}`);
         return {
           ...device,
           status: 'online',
-          battery: realData?.params?.battery_level || realData?.params?.battery_percentage || device.battery,
+          battery: realData?.params?.battery_level || realData?.params?.battery_percentage || realData?.params?.battery_percent || device.battery,
           rssi: realData?.params?.rssi || realData?.params?.signal_level || device.rssi,
-          lastEvent: isLocalOnline ? "Connecté (Réseau local)" : "En veille (Cloud)"
+          lastEvent: isLocalOnline ? "Connecté (Local)" : "Connecté (Cloud)"
         };
       }
       
