@@ -56,48 +56,61 @@ export default function SmartHome({ devices: initialDevices }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {/* Carte Sonnette Spéciale */}
         {devices.map(device => {
-          if (device.type === 'doorbell') {
-            return (
-              <div key={device.id} className="glass-card p-6 rounded-[2.5rem] border border-white/5 flex flex-col gap-6 group hover:border-brand-cyan/20 transition-all duration-500 relative overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-cyan/5 rounded-full blur-3xl group-hover:bg-brand-cyan/10 transition-all" />
-                
-                <div className="flex items-start justify-between relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-brand-cyan/10 flex items-center justify-center text-brand-cyan border border-brand-cyan/20">
-                    <Bell size={28} />
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
+          const isDoorbell = device.type === 'doorbell';
+          const Icon = isDoorbell ? Bell : (device.type === 'light' ? Lightbulb : Info);
+          
+          return (
+            <div key={device.id || device.name} className="glass-card p-6 rounded-[2.5rem] border border-white/5 flex flex-col gap-6 group hover:border-brand-cyan/20 transition-all duration-500 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-cyan/5 rounded-full blur-3xl group-hover:bg-brand-cyan/10 transition-all" />
+              
+              <div className="flex items-start justify-between relative z-10">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${device.status === 'online' ? 'bg-brand-cyan/10 text-brand-cyan border-brand-cyan/20' : 'bg-slate-900 text-slate-500 border-white/5'}`}>
+                  <Icon size={28} />
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  {device.rssi && (
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-black ${device.rssi < -70 ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-brand-mint/10 border-brand-mint/20 text-brand-mint'}`}>
                       <Wifi size={10} /> {device.rssi} dBm
                     </div>
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-black ${device.battery < 20 ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-brand-mint/10 border-brand-mint/20 text-brand-mint'}`}>
+                  )}
+                  {device.battery && (
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-black ${parseInt(device.battery) < 20 ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-brand-mint/10 border-brand-mint/20 text-brand-mint'}`}>
                       <Battery size={10} /> {device.battery}%
                     </div>
+                  )}
+                  <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${device.status === 'online' ? 'bg-brand-mint/10 text-brand-mint' : 'bg-rose-500/10 text-rose-500'}`}>
+                    {device.status}
                   </div>
                 </div>
+              </div>
 
-                <div>
-                   <h3 className="text-xl font-black text-white uppercase tracking-tight">{device.name}</h3>
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{device.brand} Smart Doorbell</p>
-                </div>
+              <div>
+                 <h3 className="text-xl font-black text-white uppercase tracking-tight truncate">{device.name}</h3>
+                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{device.brand || 'Appareil Connecté'}</p>
+              </div>
 
-                <div className="space-y-3">
-                   <div className="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
-                      <div className="flex items-center gap-3 text-slate-400">
-                         <Clock size={14} className="text-brand-cyan" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Dernier Événement</span>
-                      </div>
-                      <p className="text-xs text-white mt-2 font-medium">{device.lastEvent}</p>
-                   </div>
-                </div>
+              <div className="space-y-3">
+                 <div className="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
+                    <div className="flex items-center gap-3 text-slate-400">
+                       <Clock size={14} className="text-brand-cyan" />
+                       <span className="text-[10px] font-black uppercase tracking-widest">Statut</span>
+                    </div>
+                    <p className="text-xs text-white mt-2 font-medium">{device.lastEvent}</p>
+                 </div>
+              </div>
 
+              {isDoorbell ? (
                 <div className="grid grid-cols-2 gap-3 mt-auto">
                    <button className="py-3 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 border border-white/5 transition-all">Vignette</button>
                    <button className="py-3 rounded-xl bg-brand-cyan text-slate-950 text-[10px] font-black uppercase tracking-widest hover:bg-white shadow-[0_0_20px_rgba(0,209,255,0.2)] transition-all">Carillon</button>
                 </div>
-              </div>
-            );
-          }
-          return null;
+              ) : (
+                <button className={`w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all mt-auto ${device.status === 'online' ? 'bg-white text-slate-950' : 'bg-slate-900 text-slate-500 border border-white/5'}`}>
+                  {device.status === 'online' ? 'Éteindre' : 'Allumer'}
+                </button>
+              )}
+            </div>
+          );
         })}
 
         {/* Bouton Ajouter */}

@@ -31,24 +31,21 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [vmsRes, nodeRes, regRes] = await Promise.all([
-        fetch('/api/vms'),
-        fetch('/api/node/status'),
-        fetch('/api/registry'),
+      const results = await Promise.allSettled([
+        fetch('/api/vms').then(r => r.json()),
+        fetch('/api/node/status').then(r => r.json()),
+        fetch('/api/registry').then(r => r.json()),
       ]);
+      
+      const vmsData = results[0].status === 'fulfilled' ? results[0].value : { success: false };
+      const nodeData = results[1].status === 'fulfilled' ? results[1].value : { success: false };
+      const regData = results[2].status === 'fulfilled' ? results[2].value : { success: false };
 
-      if (!vmsRes.ok || !nodeRes.ok || !regRes.ok) throw new Error('Echec de synchronisation backend');
+      if (vmsData.success) setVms(vmsData.data);
+      if (nodeData.success) setNodeStatus(nodeData.data);
+      if (regData) setRegistry(regData); 
 
-      const vmsData = await vmsRes.json();
-      const nodeData = await nodeRes.json();
-      const regData = await regRes.json();
-
-      if (!vmsData.success) throw new Error(vmsData.error);
-
-      setVms(vmsData.data);
-      setNodeStatus(nodeData.data);
-      setRegistry(regData.data);
-      setConnected(true);
+      setConnected(vmsData.success || nodeData.success);
       setLastUpdate(new Date());
 
       const vmIdsWithServices = vmsData.data
