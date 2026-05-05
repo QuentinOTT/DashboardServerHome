@@ -357,18 +357,6 @@ app.get('/api/domotique/status', async (req, res) => {
       return { ...device, status: 'offline', lastEvent: "Injoignable" };
     }));
 
-      // Sinon, on fait un simple ping local
-      return new Promise((resolve) => {
-        const socket = net.connect(80, device.ip, () => {
-          socket.destroy();
-          resolve({ ...device, status: 'online' });
-        });
-        socket.setTimeout(1500);
-        socket.on('timeout', () => { socket.destroy(); resolve({ ...device, status: 'offline' }); });
-        socket.on('error', () => { resolve({ ...device, status: 'offline' }); });
-      });
-    }));
-
     res.json({ success: true, devices: updatedDevices });
   } catch (err) {
     res.status(500).json({ success: false, error: "Erreur lors du scan domotique" });
