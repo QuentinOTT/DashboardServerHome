@@ -38,7 +38,7 @@ function StatCard({ icon: Icon, label, value, subValue, trend, color, delay, sec
           <div className="flex flex-col">
             <span className="text-sm font-bold text-slate-600 font-mono">{subValue}</span>
             {secondaryValue && (
-              <span className="text-[10px] font-bold text-brand-cyan/60 flex items-center gap-1 mt-1">
+              <span className="text-xs font-black text-brand-cyan flex items-center gap-1.5 mt-2 animate-pulse">
                 {secondaryValue}
               </span>
             )}
