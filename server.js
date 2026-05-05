@@ -269,28 +269,71 @@ app.post('/api/node/power-profile', (req, res) => {
   }
 });
 
-// --- DOMOTIQUE STATUS (PING) ---
+// --- TAPO CLOUD INTEGRATION ---
+async function getTapoDevices(email, password) {
+  try {
+    // 1. Login au Cloud TP-Link
+    const loginRes = await axios.post('https://wap.tplinkcloud.com', {
+      method: "login",
+      params: {
+        appType: "Tapo_Android",
+        cloudUserName: email,
+        cloudPassword: password,
+        terminalUUID: "52386121-7566-47b2-a447-798138722026"
+      }
+    });
+
+    const token = loginRes.data.result?.token;
+    if (!token) return null;
+
+    // 2. Récupérer la liste des appareils
+    const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
+      method: "getDeviceList"
+    });
+
+    return devicesRes.data.result?.deviceList || [];
+  } catch (err) {
+    console.error("❌ Erreur Tapo Cloud:", err.message);
+    return null;
+  }
+}
+
+// --- DOMOTIQUE STATUS (REAL & PING) ---
 app.get('/api/domotique/status', async (req, res) => {
   try {
     const registry = JSON.parse(readFileSync(join(__dirname, 'service-registry.json'), 'utf8'));
     const devices = registry.domotique || [];
+    const tapoCreds = registry.settings?.tapo;
     
+    let realTapoDevices = [];
+    if (tapoCreds?.email && tapoCreds?.password) {
+      console.log(`☁️ Synchro Tapo Cloud pour ${tapoCreds.email}...`);
+      realTapoDevices = await getTapoDevices(tapoCreds.email, tapoCreds.password) || [];
+    }
+
     const updatedDevices = await Promise.all(devices.map(async (device) => {
+      // Si c'est un appareil Tapo et qu'on a les infos réelles
+      const realData = realTapoDevices.find(d => d.alias === device.name || d.deviceName === device.name);
+      
+      if (realData) {
+        return {
+          ...device,
+          status: realData.status === 1 ? 'online' : 'offline',
+          battery: realData.params?.battery_level || device.battery,
+          rssi: realData.params?.rssi || device.rssi,
+          lastEvent: realData.status === 1 ? "En ligne - Prêt" : "Hors ligne"
+        };
+      }
+
+      // Sinon, on fait un simple ping local
       return new Promise((resolve) => {
         const socket = net.connect(80, device.ip, () => {
           socket.destroy();
           resolve({ ...device, status: 'online' });
         });
-        
-        socket.setTimeout(2000);
-        socket.on('timeout', () => {
-          socket.destroy();
-          resolve({ ...device, status: 'offline' });
-        });
-        
-        socket.on('error', () => {
-          resolve({ ...device, status: 'offline' });
-        });
+        socket.setTimeout(1500);
+        socket.on('timeout', () => { socket.destroy(); resolve({ ...device, status: 'offline' }); });
+        socket.on('error', () => { resolve({ ...device, status: 'offline' }); });
       });
     }));
 
