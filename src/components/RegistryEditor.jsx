@@ -94,6 +94,24 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
           </div>
           <div className="flex items-center gap-4">
             <button 
+              onClick={() => {
+                setRegistry(prev => ({
+                  ...prev,
+                  domotique: [...(prev.domotique || []), {
+                    id: `device-${Date.now()}`,
+                    type: 'light',
+                    brand: 'Generic',
+                    name: 'Nouvel Appareil',
+                    ip: '192.168.1.X',
+                    status: 'online'
+                  }]
+                }));
+              }}
+              className="px-6 py-3 rounded-2xl bg-brand-cyan/10 text-brand-cyan font-black text-xs hover:bg-brand-cyan hover:text-slate-950 transition-all flex items-center gap-2 cursor-pointer border border-brand-cyan/20"
+            >
+              <Plus size={16} /> AJOUTER APPAREIL DOMOTIQUE
+            </button>
+            <button 
               onClick={onClose}
               className="px-6 py-3 rounded-2xl bg-slate-800 text-slate-400 font-bold text-xs hover:text-white transition-all cursor-pointer"
             >
@@ -200,6 +218,94 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
               </div>
             </div>
           ))}
+
+          {/* Domotique Management */}
+          <div className="space-y-6 pt-12 border-t border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-cyan/10 flex items-center justify-center text-brand-cyan border border-brand-cyan/20">
+                <Home size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase">Appareils Domotique</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Gestion des objets connectés</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {registry.domotique?.map((device, idx) => (
+                <div key={device.id} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-slate-900/30 border border-white/5 group hover:border-white/10 transition-all">
+                  <div className="flex-1 grid grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Nom de l'Appareil</span>
+                      <input 
+                        type="text" 
+                        value={device.name} 
+                        onChange={(e) => {
+                          const newRegistry = { ...registry };
+                          newRegistry.domotique[idx].name = e.target.value;
+                          setRegistry(newRegistry);
+                        }}
+                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white focus:border-brand-cyan/50 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Type</span>
+                      <select 
+                        value={device.type} 
+                        onChange={(e) => {
+                          const newRegistry = { ...registry };
+                          newRegistry.domotique[idx].type = e.target.value;
+                          setRegistry(newRegistry);
+                        }}
+                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white"
+                      >
+                        <option value="doorbell">Sonnette / Caméra</option>
+                        <option value="light">Lumière / Prise</option>
+                        <option value="climate">Capteur / Climat</option>
+                        <option value="other">Autre</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">Marque</span>
+                      <input 
+                        type="text" 
+                        value={device.brand} 
+                        onChange={(e) => {
+                          const newRegistry = { ...registry };
+                          newRegistry.domotique[idx].brand = e.target.value;
+                          setRegistry(newRegistry);
+                        }}
+                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1">IP Locale</span>
+                      <input 
+                        type="text" 
+                        value={device.ip} 
+                        onChange={(e) => {
+                          const newRegistry = { ...registry };
+                          newRegistry.domotique[idx].ip = e.target.value;
+                          setRegistry(newRegistry);
+                        }}
+                        className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const newRegistry = { ...registry };
+                      newRegistry.domotique.splice(idx, 1);
+                      setRegistry(newRegistry);
+                    }}
+                    className="p-3 rounded-xl bg-rose-500/5 text-rose-500/40 hover:bg-rose-500 hover:text-white transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Power Management Section */}
           <div className="space-y-6 pt-12 border-t border-white/10">

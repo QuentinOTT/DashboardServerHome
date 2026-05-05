@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity, TrendingUp, Globe, Zap } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, LayoutGrid, List, Settings as SettingsIcon, Terminal, Activity, TrendingUp, Globe, Zap, Home } from 'lucide-react';
 import Header from './Header';
 import StatsCards from './StatsCards';
 import VMCard from './VMCard';
@@ -8,6 +8,7 @@ import VMDetails from './VMDetails';
 import PasscodeLock from './PasscodeLock';
 import DomainManager from './DomainManager';
 import EnergyOptimizer from './EnergyOptimizer';
+import SmartHome from './SmartHome';
 import { Toaster } from 'react-hot-toast';
 
 const REFRESH_INTERVAL = 15000;
@@ -169,13 +170,27 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex items-center gap-5">
-                  <button
-                    onClick={() => setActiveTab(activeTab === 'energy' ? 'vms' : 'energy')}
-                    className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all ${activeTab === 'energy' ? 'bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-slate-900/80 border-white/5 text-slate-400 hover:text-amber-500'}`}
-                  >
-                    <Zap size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{activeTab === 'energy' ? 'Ma Flotte' : 'Énergie'}</span>
-                  </button>
+                  <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-900/50 border border-white/5 hidden sm:flex">
+                    <button
+                      onClick={() => setActiveTab('vms')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'vms' ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                    >
+                      <LayoutGrid size={14} /> Flotte
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('domotique')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'domotique' ? 'bg-brand-cyan text-slate-950 shadow-[0_0_20px_rgba(0,209,255,0.3)]' : 'text-slate-500 hover:text-white'}`}
+                    >
+                      <Home size={14} /> Domotique
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('energy')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'energy' ? 'bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'text-slate-500 hover:text-white'}`}
+                    >
+                      <Zap size={14} /> Énergie
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => setShowDomainManager(true)}
                     className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900/80 border border-white/5 text-slate-400 hover:text-brand-cyan transition-all"
@@ -190,9 +205,15 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {activeTab === 'energy' ? (
+              {activeTab === 'energy' && (
                 <EnergyOptimizer nodeStatus={nodeStatus} powerSettings={registry?.settings?.power} />
-              ) : (
+              )}
+              
+              {activeTab === 'domotique' && (
+                <SmartHome devices={registry?.domotique || []} />
+              )}
+
+              {activeTab === 'vms' && (
                 <div className={`mobile-stack ${viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10" : "flex flex-col gap-4"}`}>
                   {vms.map((vm, i) => (
                     <VMCard key={vm.vmid} vm={vm} healthData={healthMap[vm.vmid]} index={i} viewMode={viewMode} onClick={() => setSelectedVm(vm)} />
@@ -205,9 +226,9 @@ export default function Dashboard() {
 
         <div className="app-bottom-nav sm:hidden">
           <button onClick={() => setActiveTab('vms')} className={`nav-item ${activeTab === 'vms' ? 'active' : ''}`}><div className="nav-icon-container"><LayoutGrid size={24} /></div><span>Flotte</span></button>
+          <button onClick={() => setActiveTab('domotique')} className={`nav-item ${activeTab === 'domotique' ? 'active' : ''}`}><div className="nav-icon-container"><Home size={24} /></div><span>Maison</span></button>
           <button onClick={() => setActiveTab('energy')} className={`nav-item ${activeTab === 'energy' ? 'active' : ''}`}><div className="nav-icon-container"><Zap size={24} /></div><span>Énergie</span></button>
           <button onClick={() => setActiveTab('stats')} className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}><div className="nav-icon-container"><TrendingUp size={24} /></div><span>Stats</span></button>
-          <button onClick={() => setShowSettings(true)} className="nav-item"><div className="nav-icon-container"><SettingsIcon size={24} /></div><span>Réglages</span></button>
         </div>
 
         {vms.length === 0 && !error && (

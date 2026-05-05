@@ -41,5 +41,19 @@
       "kwhPrice": 0.22,
       "currency": "€"
     }
-  }
+  },
+  "domotique": [
+    {
+      "id": "tapo-doorbell",
+      "type": "doorbell",
+      "brand": "Tapo",
+      "name": "Sonnette Entrée",
+      "ip": "192.168.1.110",
+      "model": "D210",
+      "battery": 85,
+      "rssi": -74,
+      "status": "online",
+      "lastEvent": "15:52 - Mouvement détecté"
+    }
+  ]
 }
