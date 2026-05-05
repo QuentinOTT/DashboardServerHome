@@ -293,15 +293,30 @@ async function getTapoDevices(email, password) {
     console.log("📦 [DEBUG] Liste complète des appareils :", JSON.stringify(list, null, 2));
     
     // Enrichir chaque appareil
-    const enrichedList = list.map((d) => {
+    const enrichedList = await Promise.all(list.map(async (d) => {
       try {
         if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
-        // Fusionner tout ce qu'on trouve
-        return { ...d, params: { ...d.params, ...d.extra_info, ...(typeof d.device_params === 'string' ? JSON.parse(d.device_params) : d.device_params) } };
+
+        // TENTATIVE AGRESSIVE : Demander les infos caméras spécifiques
+        const res = await axios.post(`${baseUrl}?token=${token}`, {
+          method: "passthrough",
+          params: { 
+            deviceId: d.deviceId, 
+            requestData: JSON.stringify({ method: "get_device_info", params: {} }) 
+          }
+        });
+
+        const rawResp = res.data.result?.responseData;
+        if (rawResp) {
+          const state = JSON.parse(rawResp);
+          console.log(`🔋 [BATTERY-CHECK] ${d.alias} :`, JSON.stringify(state.result || state, null, 2));
+          return { ...d, params: { ...d.params, ...state.result, ...state.params } };
+        }
+        return d;
       } catch (e) { return d; }
-    });
+    }));
 
     return enrichedList;
 
