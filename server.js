@@ -354,7 +354,7 @@ app.get('/api/domotique/status', async (req, res) => {
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      // Tenter de trouver dans Home Assistant d'abord
+      // 1. Priorité Home Assistant
       const haEntity = haStates.find(e => 
         e.entity_id === device.ha_id || 
         (e.attributes?.friendly_name && e.attributes.friendly_name.toLowerCase() === device.name.toLowerCase())
@@ -370,13 +370,14 @@ app.get('/api/domotique/status', async (req, res) => {
         };
       }
 
+      // 2. Fallback Tapo Cloud
       const realData = realTapoDevices.find(d => {
         const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
         const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
         return aliasMatch || nameMatch;
       });
 
-      // Vérification réseau locale via Socket (port 80)
+      // 3. Fallback Scan Local
       const isLocalOnline = await new Promise((resolve) => {
         if (!device.ip) return resolve(false);
         const socket = net.connect(80, device.ip, () => { socket.destroy(); resolve(true); });
@@ -400,7 +401,8 @@ app.get('/api/domotique/status', async (req, res) => {
 
     res.json({ success: true, devices: updatedDevices });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Erreur de synchronisation" });
+    console.error("🔥 Erreur Domotique:", err.message);
+    res.status(500).json({ success: false, error: "Erreur de scan" });
   }
 });
 
