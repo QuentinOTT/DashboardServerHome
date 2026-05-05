@@ -307,6 +307,64 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
             </div>
           </div>
 
+          {/* Comptes & API Section */}
+          <div className="space-y-6 pt-12 border-t border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                <Shield size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase">Comptes & API</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Identifiants pour les services tiers</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Tapo / TP-Link</span>
+                <input 
+                  type="email" 
+                  placeholder="votre@email.com"
+                  value={registry.settings?.tapo?.email || ''} 
+                  onChange={(e) => {
+                    setRegistry(prev => ({
+                      ...prev,
+                      settings: {
+                        ...prev.settings,
+                        tapo: { ...(prev.settings?.tapo || {}), email: e.target.value }
+                      }
+                    }));
+                  }}
+                  className="bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-amber-500/50 focus:outline-none transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Mot de Passe Tapo</span>
+                <input 
+                  type="password" 
+                  placeholder="••••••••"
+                  value={registry.settings?.tapo?.password || ''} 
+                  onChange={(e) => {
+                    setRegistry(prev => ({
+                      ...prev,
+                      settings: {
+                        ...prev.settings,
+                        tapo: { ...(prev.settings?.tapo || {}), password: e.target.value }
+                      }
+                    }));
+                  }}
+                  className="bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:border-amber-500/50 focus:outline-none transition-all"
+                />
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex gap-4 items-start text-amber-500/60">
+               <Info size={20} className="shrink-0 mt-1" />
+               <p className="text-[10px] font-bold leading-relaxed uppercase tracking-wider">
+                 Ces identifiants permettent au Dashboard de se connecter au Cloud TP-Link pour récupérer le niveau de batterie réel et les vignettes de votre sonnette D210.
+               </p>
+            </div>
+          </div>
+
           {/* Power Management Section */}
           <div className="space-y-6 pt-12 border-t border-white/10">
             <div className="flex items-center gap-4">
