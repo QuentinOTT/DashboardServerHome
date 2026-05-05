@@ -48,6 +48,8 @@ export default function Dashboard() {
       setConnected(vmsData.success || nodeData.success);
       setLastUpdate(new Date());
 
+      if (!vmsData.data) return;
+
       const vmIdsWithServices = vmsData.data
         .filter(vm => vm.services && vm.services.length > 0)
         .map(vm => vm.vmid);
