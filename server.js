@@ -99,18 +99,30 @@ app.get('/api/node/status', async (req, res) => {
   try {
     const { data } = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/status`);
     
-    // Tentative de récupération des températures via sensors (si sur le même hôte)
+    // Tentative de récupération des températures via sensors
     let temps = null;
     try {
       const sensorsOutput = execSync('sensors -j', { encoding: 'utf8' });
       const sensorsData = JSON.parse(sensorsOutput);
-      // Extraction de la température package ou core 0
-      const coretemp = sensorsData['coretemp-isa-0000'];
-      if (coretemp) {
-        temps = coretemp['Package id 0']?.['temp1_input'] || coretemp['Core 0']?.['temp2_input'];
+      
+      // Recherche récursive simplifiée pour trouver une température CPU
+      for (const device in sensorsData) {
+        const deviceData = sensorsData[device];
+        for (const sensor in deviceData) {
+          // On cherche "Package id 0" ou "Core 0" ou n'importe quoi avec "temp"
+          if (sensor.includes('Package id 0') || sensor.includes('Core 0') || sensor.includes('temp1')) {
+            const val = deviceData[sensor].temp1_input || deviceData[sensor].temp2_input || deviceData[sensor].temp3_input;
+            if (val) {
+              temps = val;
+              break;
+            }
+          }
+        }
+        if (temps) break;
       }
+      if (temps) console.log(`🌡️ Température détectée : ${temps}°C`);
     } catch (e) {
-      // Silencieusement ignorer si sensors n'est pas dispo
+      console.error("❌ Erreur sensors:", e.message);
     }
 
     res.json({ success: true, data: { ...data.data, cpuTemp: temps } });
