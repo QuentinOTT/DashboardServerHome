@@ -289,9 +289,6 @@ async function getTapoDevices(email, password) {
     const devicesRes = await axios.post(`${baseUrl}?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
     
-    // Log TOTAL pour ne rien rater
-    console.log("📦 [DEBUG] Liste complète des appareils :", JSON.stringify(list, null, 2));
-    
     // Enrichir chaque appareil
     const enrichedList = await Promise.all(list.map(async (d) => {
       try {
@@ -299,22 +296,13 @@ async function getTapoDevices(email, password) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
 
-        // TENTATIVE AGRESSIVE : Demander les infos caméras spécifiques
         const res = await axios.post(`${baseUrl}?token=${token}`, {
           method: "passthrough",
-          params: { 
-            deviceId: d.deviceId, 
-            requestData: JSON.stringify({ method: "get_device_info", params: {} }) 
-          }
+          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_info", params: {} }) }
         });
 
-        const rawResp = res.data.result?.responseData;
-        if (rawResp) {
-          const state = JSON.parse(rawResp);
-          console.log(`🔋 [BATTERY-CHECK] ${d.alias} :`, JSON.stringify(state.result || state, null, 2));
-          return { ...d, params: { ...d.params, ...state.result, ...state.params } };
-        }
-        return d;
+        const state = JSON.parse(res.data.result?.responseData || "{}");
+        return { ...d, params: { ...d.params, ...state.result, ...state.params } };
       } catch (e) { return d; }
     }));
 
