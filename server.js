@@ -292,7 +292,15 @@ async function getTapoDevices(email, password) {
       method: "getDeviceList"
     });
 
-    return devicesRes.data.result?.deviceList || [];
+    return (devicesRes.data.result?.deviceList || []).map(d => {
+      // Décoder le nom s'il est en base64
+      try {
+        if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
+          d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
+        }
+      } catch(e) {}
+      return d;
+    });
   } catch (err) {
     console.error("❌ Erreur Tapo Cloud:", err.message);
     return null;
