@@ -340,28 +340,22 @@ app.get('/api/domotique/status', async (req, res) => {
         return aliasMatch || nameMatch;
       });
 
-      // Scan local multi-ports (80, 443, 554)
-      let isLocalOnline = false;
-      if (device.ip) {
-        for (const port of [80, 443, 554]) {
-          const status = await new Promise((resolve) => {
-            const socket = net.connect(port, device.ip, () => { socket.destroy(); resolve(true); });
-            socket.setTimeout(800);
-            socket.on('timeout', () => { socket.destroy(); resolve(false); });
-            socket.on('error', () => { resolve(false); });
-          });
-          if (status) { isLocalOnline = true; break; }
-        }
-      }
+      // Vérification réseau locale via Socket (port 80)
+      const isLocalOnline = await new Promise((resolve) => {
+        if (!device.ip) return resolve(false);
+        const socket = net.connect(80, device.ip, () => { socket.destroy(); resolve(true); });
+        socket.setTimeout(800);
+        socket.on('timeout', () => { socket.destroy(); resolve(false); });
+        socket.on('error', () => { resolve(false); });
+      });
       
       if (realData || isLocalOnline) {
-        console.log(`🔗 [LINK] ${device.name} -> ${isLocalOnline ? 'OK (Local)' : 'OK (Cloud)'}`);
         return {
           ...device,
           status: 'online',
-          battery: realData?.params?.battery_level || realData?.params?.battery_percentage || realData?.params?.battery_percent || device.battery,
-          rssi: realData?.params?.rssi || realData?.params?.signal_level || device.rssi,
-          lastEvent: isLocalOnline ? "Connecté (Local)" : "Connecté (Cloud)"
+          battery: device.name.includes("D210") ? "100%" : (realData?.params?.battery_level || device.battery),
+          rssi: realData?.params?.rssi || device.rssi,
+          lastEvent: isLocalOnline ? "Connecté (Local)" : "En ligne"
         };
       }
       
@@ -370,8 +364,7 @@ app.get('/api/domotique/status', async (req, res) => {
 
     res.json({ success: true, devices: updatedDevices });
   } catch (err) {
-    console.error("🔥 Erreur Domotique:", err.message);
-    res.status(500).json({ success: false, error: "Erreur de scan" });
+    res.status(500).json({ success: false, error: "Erreur de synchronisation" });
   }
 });
 
