@@ -328,38 +328,43 @@ app.get('/api/domotique/status', async (req, res) => {
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      console.log(`🔎 [SCAN] Recherche de correspondance pour : "${device.name}"...`);
-      
       const realData = realTapoDevices.find(d => {
         const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
         const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
         return aliasMatch || nameMatch;
       });
 
-      // Faire un ping local pour confirmer l'état réel
+      // Vérification réseau locale via Socket (plus fiable que Ping)
       const isLocalOnline = await new Promise((resolve) => {
         if (!device.ip) return resolve(false);
-        const { exec } = require('child_process');
-        exec(`ping -c 1 -W 1 ${device.ip}`, (error) => resolve(!error));
+        const net = require('net');
+        const socket = net.connect(80, device.ip, () => {
+          socket.destroy();
+          resolve(true);
+        });
+        socket.setTimeout(1500);
+        socket.on('timeout', () => { socket.destroy(); resolve(false); });
+        socket.on('error', () => { resolve(false); });
       });
       
       if (realData || isLocalOnline) {
-        console.log(`🔗 [LINK] Liaison établie pour : ${device.name} (Local: ${isLocalOnline ? 'OUI' : 'NON'})`);
+        console.log(`🔗 [LINK] ${device.name} -> ${isLocalOnline ? 'ONLINE (Local)' : 'ONLINE (Cloud)'}`);
         return {
           ...device,
-          status: isLocalOnline ? 'online' : (realData?.status === 1 ? 'online' : 'offline'),
+          status: 'online',
           battery: realData?.params?.battery_level || realData?.params?.battery_percentage || device.battery,
           rssi: realData?.params?.rssi || realData?.params?.signal_level || device.rssi,
-          lastEvent: isLocalOnline ? "Connecté (Local)" : "En veille (Cloud)"
+          lastEvent: isLocalOnline ? "Connecté (Réseau local)" : "En veille (Cloud)"
         };
       }
       
-      return { ...device, status: 'offline', lastEvent: "Injoignable" };
+      return { ...device, status: 'offline', lastEvent: "Hors ligne" };
     }));
 
     res.json({ success: true, devices: updatedDevices });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Erreur lors du scan domotique" });
+    console.error("🔥 Erreur Domotique:", err.message);
+    res.status(500).json({ success: false, error: "Erreur de scan" });
   }
 });
 
