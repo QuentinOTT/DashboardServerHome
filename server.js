@@ -302,6 +302,8 @@ async function getTapoDevices(email, password) {
         });
 
         const details = res.data.result || {};
+        console.log(`📊 [DEBUG] Infos détaillées pour ${d.alias} :`, JSON.stringify(details, null, 2));
+
         return { ...d, params: { ...d.params, ...details } };
       } catch (e) { return d; }
     }));
