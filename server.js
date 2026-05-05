@@ -260,12 +260,13 @@ app.get('/api/node/power-profile', (req, res) => {
 app.post('/api/node/power-profile', (req, res) => {
   try {
     const { profile } = req.body;
-    // Commande envoyée à l'hôte via la clé SSH
-    execSync(`ssh ${SSH_HOST} 'echo "${profile}" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor'`);
+    // Commande plus robuste pour outrepasser les blocages de permission sur l'hôte
+    execSync(`ssh ${SSH_HOST} 'for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo "${profile}" > $i; done'`);
     console.log(`⚡ [HOST] Profil d'énergie mis à jour : ${profile}`);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Échec de la commande SSH vers l'hôte." });
+    console.error(`❌ Erreur profil d'énergie: ${err.message}`);
+    res.status(500).json({ success: false, error: "Échec de la commande SSH. Vérifiez les droits sur l'hôte." });
   }
 });
 
@@ -301,14 +302,18 @@ async function getTapoDevices(email, password) {
 // --- DOMOTIQUE STATUS (REAL & PING) ---
 app.get('/api/domotique/status', async (req, res) => {
   try {
-    const registry = JSON.parse(readFileSync(join(__dirname, 'service-registry.json'), 'utf8'));
+    const registryPath = join(__dirname, 'service-registry.json');
+    const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
     const devices = registry.domotique || [];
     const tapoCreds = registry.settings?.tapo;
     
     let realTapoDevices = [];
     if (tapoCreds?.email && tapoCreds?.password) {
-      console.log(`☁️ Synchro Tapo Cloud pour ${tapoCreds.email}...`);
+      console.log(`☁️  [TAPO] Synchro Cloud pour ${tapoCreds.email}...`);
       realTapoDevices = await getTapoDevices(tapoCreds.email, tapoCreds.password) || [];
+      console.log(`✅ [TAPO] ${realTapoDevices.length} appareils synchronisés.`);
+    } else {
+      console.log(`⚠️  [TAPO] Identifiants manquants dans les réglages.`);
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
