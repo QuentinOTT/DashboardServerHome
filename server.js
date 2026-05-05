@@ -270,6 +270,23 @@ app.post('/api/node/power-profile', (req, res) => {
   }
 });
 
+// --- HOME ASSISTANT INTEGRATION ---
+async function getHADevices() {
+  const url = process.env.HA_URL;
+  const token = process.env.HA_TOKEN;
+  if (!url || !token) return null;
+
+  try {
+    const res = await axios.get(`${url}/api/states`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  } catch (err) {
+    console.error("❌ Erreur Home Assistant:", err.message);
+    return null;
+  }
+}
+
 // --- TAPO CLOUD INTEGRATION ---
 async function getTapoDevices(email, password) {
   try {
@@ -327,13 +344,32 @@ app.get('/api/domotique/status', async (req, res) => {
     const tapoEmail = process.env.TAPO_EMAIL || registry.settings?.tapo?.email;
     const tapoPassword = process.env.TAPO_PASSWORD || registry.settings?.tapo?.password;
     
+    // 1. Récupérer les données Home Assistant (Priorité)
+    const haStates = await getHADevices() || [];
+    
+    // 2. Récupérer les données Tapo Cloud (Fallback)
     let realTapoDevices = [];
     if (tapoEmail && tapoPassword) {
-      console.log(`☁️  [TAPO] Synchro Cloud pour ${tapoEmail}...`);
       realTapoDevices = await getTapoDevices(tapoEmail, tapoPassword) || [];
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
+      // Tenter de trouver dans Home Assistant d'abord
+      const haEntity = haStates.find(e => 
+        e.entity_id === device.ha_id || 
+        (e.attributes?.friendly_name && e.attributes.friendly_name.toLowerCase() === device.name.toLowerCase())
+      );
+
+      if (haEntity) {
+        return {
+          ...device,
+          status: haEntity.state === 'unavailable' || haEntity.state === 'off' ? 'offline' : 'online',
+          battery: haEntity.attributes?.battery_level || haEntity.attributes?.battery || device.battery,
+          rssi: haEntity.attributes?.rssi || device.rssi,
+          lastEvent: `HA: ${haEntity.state}`
+        };
+      }
+
       const realData = realTapoDevices.find(d => {
         const aliasMatch = d.alias && d.alias.toLowerCase().trim() === device.name.toLowerCase().trim();
         const nameMatch = d.deviceName && d.deviceName.toLowerCase().trim() === device.name.toLowerCase().trim();
