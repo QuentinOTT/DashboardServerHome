@@ -102,27 +102,31 @@ app.get('/api/node/status', async (req, res) => {
     // Tentative de récupération des températures via sensors
     let temps = null;
     try {
-      const sensorsOutput = execSync('sensors -j', { encoding: 'utf8' });
+      // On utilise le chemin complet pour être sûr
+      const sensorsOutput = execSync('/usr/bin/sensors -j', { encoding: 'utf8', timeout: 2000 });
       const sensorsData = JSON.parse(sensorsOutput);
       
-      // Recherche récursive simplifiée pour trouver une température CPU
-      for (const device in sensorsData) {
-        const deviceData = sensorsData[device];
-        for (const sensor in deviceData) {
-          // On cherche "Package id 0" ou "Core 0" ou n'importe quoi avec "temp"
-          if (sensor.includes('Package id 0') || sensor.includes('Core 0') || sensor.includes('temp1')) {
-            const val = deviceData[sensor].temp1_input || deviceData[sensor].temp2_input || deviceData[sensor].temp3_input;
-            if (val) {
-              temps = val;
-              break;
-            }
+      // Fonction récursive pour trouver n'importe quelle valeur "tempX_input"
+      const findTemp = (obj) => {
+        for (const key in obj) {
+          if (key.endsWith('_input') && typeof obj[key] === 'number') return obj[key];
+          if (typeof obj[key] === 'object' && obj[key] !== null) {
+            const found = findTemp(obj[key]);
+            if (found) return found;
           }
         }
-        if (temps) break;
+        return null;
+      };
+
+      temps = findTemp(sensorsData);
+      
+      if (temps) {
+        console.log(`✅ [OK] Température CPU trouvée : ${temps}°C`);
+      } else {
+        console.log(`⚠️ [WARN] Sensors a répondu mais aucune température n'a été trouvée dans le JSON.`);
       }
-      if (temps) console.log(`🌡️ Température détectée : ${temps}°C`);
     } catch (e) {
-      console.error("❌ Erreur sensors:", e.message);
+      console.log(`❌ [ERROR] Échec de l'exécution de sensors : ${e.message}`);
     }
 
     res.json({ success: true, data: { ...data.data, cpuTemp: temps } });
