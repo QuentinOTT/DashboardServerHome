@@ -275,7 +275,7 @@ async function getTapoDevices(email, password) {
   try {
     const loginRes = await axios.post('https://wap.tplinkcloud.com', {
       method: "login",
-      params: { appType: "Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
+      params: { appType: "TP-Link_Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
     });
 
     const token = loginRes.data.result?.token;
@@ -284,38 +284,22 @@ async function getTapoDevices(email, password) {
     const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, { method: "getDeviceList" });
     const list = devicesRes.data.result?.deviceList || [];
     
-    // Enrichir chaque appareil avec ses détails réels (Batterie/Signal)
+    // Enrichir chaque appareil
     const enrichedList = await Promise.all(list.map(async (d) => {
       try {
-        // Décoder le nom
         if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
 
-        // Tenter plusieurs méthodes pour les détails
-        let details = {};
-        const methods = ["get_device_info", "get_device_state", "get_status"];
-        
-        for (const m of methods) {
-          const res = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
-            method: "passthrough",
-            params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: m }) }
-          });
-          
-          if (res.data.result?.responseData) {
-            const parsed = JSON.parse(res.data.result.responseData);
-            details = { ...details, ...(parsed.result || parsed.params || parsed) };
-            if (Object.keys(details).length > 2) break; // Si on a trouvé des infos, on s'arrête
-          } else {
-            console.log(`❌ [DEBUG] Méthode ${m} a échoué pour ${d.alias} (Code: ${res.data.error_code})`);
-          }
-        }
+        // Tenter plusieurs approches pour les détails
+        const res = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
+          method: "getDeviceInfo",
+          params: { deviceId: d.deviceId }
+        });
 
+        const details = res.data.result || {};
         return { ...d, params: { ...d.params, ...details } };
-      } catch (e) { 
-        console.error(`🔥 [FATAL] Erreur sur ${d.alias}:`, e.message);
-        return d; 
-      }
+      } catch (e) { return d; }
     }));
 
     return enrichedList;
