@@ -273,34 +273,37 @@ app.post('/api/node/power-profile', (req, res) => {
 // --- TAPO CLOUD INTEGRATION ---
 async function getTapoDevices(email, password) {
   try {
-    // 1. Login au Cloud TP-Link
     const loginRes = await axios.post('https://wap.tplinkcloud.com', {
       method: "login",
-      params: {
-        appType: "Tapo_Android",
-        cloudUserName: email,
-        cloudPassword: password,
-        terminalUUID: "52386121-7566-47b2-a447-798138722026"
-      }
+      params: { appType: "Tapo_Android", cloudUserName: email, cloudPassword: password, terminalUUID: "52386121-7566-47b2-a447-798138722026" }
     });
 
     const token = loginRes.data.result?.token;
     if (!token) return null;
 
-    // 2. Récupérer la liste des appareils
-    const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
-      method: "getDeviceList"
-    });
-
-    return (devicesRes.data.result?.deviceList || []).map(d => {
-      // Décoder le nom s'il est en base64
+    const devicesRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, { method: "getDeviceList" });
+    const list = devicesRes.data.result?.deviceList || [];
+    
+    // Enrichir chaque appareil avec ses détails réels (Batterie/Signal)
+    const enrichedList = await Promise.all(list.map(async (d) => {
       try {
+        // Décoder le nom
         if (d.alias && /^[A-Za-z0-9+/=]+$/.test(d.alias) && d.alias.length > 8) {
           d.alias = Buffer.from(d.alias, 'base64').toString('utf8');
         }
-      } catch(e) {}
-      return d;
-    });
+
+        // Récupérer les détails (pour la batterie)
+        const detailsRes = await axios.post(`https://wap.tplinkcloud.com?token=${token}`, {
+          method: "passthrough",
+          params: { deviceId: d.deviceId, requestData: JSON.stringify({ method: "get_device_info" }) }
+        });
+
+        const details = JSON.parse(detailsRes.data.result?.responseData || "{}");
+        return { ...d, params: { ...d.params, ...details.result } };
+      } catch (e) { return d; }
+    }));
+
+    return enrichedList;
   } catch (err) {
     console.error("❌ Erreur Tapo Cloud:", err.message);
     return null;
@@ -318,20 +321,11 @@ app.get('/api/domotique/status', async (req, res) => {
     
     let realTapoDevices = [];
     if (tapoEmail && tapoPassword) {
-      console.log(`☁️  [TAPO] Synchro Cloud via .env pour ${tapoEmail}...`);
+      console.log(`☁️  [TAPO] Synchro Cloud pour ${tapoEmail}...`);
       realTapoDevices = await getTapoDevices(tapoEmail, tapoPassword) || [];
-      console.log(`✅ [TAPO] ${realTapoDevices.length} appareils synchronisés.`);
-    } else {
-      console.log(`⚠️  [TAPO] Identifiants absents (Vérifiez votre fichier .env).`);
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      // Log pour aider à la correspondance des noms
-      if (realTapoDevices.length > 0) {
-        console.log(`🔍 [DEBUG] Appareils Tapo détectés : ${realTapoDevices.map(d => `'${d.alias}'`).join(', ')}`);
-      }
-
-      // Recherche insensible à la casse
       const realData = realTapoDevices.find(d => 
         (d.alias && d.alias.toLowerCase() === device.name.toLowerCase()) || 
         (d.deviceName && d.deviceName.toLowerCase() === device.name.toLowerCase())
@@ -339,13 +333,14 @@ app.get('/api/domotique/status', async (req, res) => {
       
       if (realData) {
         console.log(`🔗 [MATCH] Liaison réussie pour : ${device.name}`);
-        console.log(`📊 [DEBUG] Données brutes de ${device.name}:`, JSON.stringify(realData.params || {}, null, 2));
-        
+        // Log des params pour vérifier les noms des champs
+        console.log(`📊 [DEBUG] Params pour ${device.name}:`, JSON.stringify(realData.params || {}, null, 2));
+
         return {
           ...device,
           status: realData.status === 1 ? 'online' : 'offline',
-          battery: realData.params?.battery_level || realData.params?.battery_percentage || device.battery,
-          rssi: realData.params?.rssi || realData.params?.signal_level || device.rssi,
+          battery: realData.params?.battery_level || realData.params?.battery_percentage || realData.params?.battery || device.battery,
+          rssi: realData.params?.rssi || realData.params?.signal_level || realData.params?.signal_strength || device.rssi,
           lastEvent: realData.status === 1 ? "En ligne - Prêt" : "Hors ligne"
         };
       }
