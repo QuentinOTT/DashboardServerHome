@@ -317,10 +317,19 @@ app.get('/api/domotique/status', async (req, res) => {
     }
 
     const updatedDevices = await Promise.all(devices.map(async (device) => {
-      // Si c'est un appareil Tapo et qu'on a les infos réelles
-      const realData = realTapoDevices.find(d => d.alias === device.name || d.deviceName === device.name);
+      // Log pour aider à la correspondance des noms
+      if (realTapoDevices.length > 0) {
+        console.log(`🔍 [DEBUG] Appareils Tapo détectés : ${realTapoDevices.map(d => `'${d.alias}'`).join(', ')}`);
+      }
+
+      // Recherche insensible à la casse
+      const realData = realTapoDevices.find(d => 
+        (d.alias && d.alias.toLowerCase() === device.name.toLowerCase()) || 
+        (d.deviceName && d.deviceName.toLowerCase() === device.name.toLowerCase())
+      );
       
       if (realData) {
+        console.log(`🔗 [MATCH] Liaison réussie pour : ${device.name}`);
         return {
           ...device,
           status: realData.status === 1 ? 'online' : 'offline',
