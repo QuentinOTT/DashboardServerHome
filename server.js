@@ -7,7 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import net from 'net';
-import { readFileSync, writeFile } from 'fs';
+import { readFileSync, writeFile, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
@@ -102,8 +102,11 @@ app.get('/api/node/status', async (req, res) => {
     // Tentative de récupération des températures via sensors
     let temps = null;
     try {
-      // On utilise le chemin complet pour être sûr
-      const sensorsOutput = execSync('/usr/bin/sensors -j', { encoding: 'utf8', timeout: 2000 });
+      let sensorsPath = 'sensors';
+      if (existsSync('/usr/bin/sensors')) sensorsPath = '/usr/bin/sensors';
+      else if (existsSync('/bin/sensors')) sensorsPath = '/bin/sensors';
+
+      const sensorsOutput = execSync(`${sensorsPath} -j`, { encoding: 'utf8', timeout: 2000 });
       const sensorsData = JSON.parse(sensorsOutput);
       
       // Fonction récursive pour trouver n'importe quelle valeur "tempX_input"
