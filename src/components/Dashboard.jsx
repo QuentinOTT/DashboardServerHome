@@ -176,12 +176,14 @@ export default function Dashboard() {
                     >
                       <LayoutGrid size={14} /> Flotte
                     </button>
+                    {/* 
                     <button
                       onClick={() => setActiveTab('domotique')}
                       className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'domotique' ? 'bg-brand-cyan text-slate-950 shadow-[0_0_20px_rgba(0,209,255,0.3)]' : 'text-slate-500 hover:text-white'}`}
                     >
                       <Home size={14} /> Domotique
                     </button>
+                    */}
                     <button
                       onClick={() => setActiveTab('energy')}
                       className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'energy' ? 'bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'text-slate-500 hover:text-white'}`}
@@ -232,7 +234,9 @@ export default function Dashboard() {
 
         <div className="app-bottom-nav sm:hidden">
           <button onClick={() => setActiveTab('vms')} className={`nav-item ${activeTab === 'vms' ? 'active' : ''}`}><div className="nav-icon-container"><LayoutGrid size={24} /></div><span>Flotte</span></button>
+          {/* 
           <button onClick={() => setActiveTab('domotique')} className={`nav-item ${activeTab === 'domotique' ? 'active' : ''}`}><div className="nav-icon-container"><Home size={24} /></div><span>Maison</span></button>
+          */}
           <button onClick={() => setActiveTab('energy')} className={`nav-item ${activeTab === 'energy' ? 'active' : ''}`}><div className="nav-icon-container"><Zap size={24} /></div><span>Énergie</span></button>
           <button onClick={() => setActiveTab('stats')} className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}><div className="nav-icon-container"><TrendingUp size={24} /></div><span>Stats</span></button>
         </div>

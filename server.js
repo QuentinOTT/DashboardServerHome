@@ -36,6 +36,7 @@ const PROXMOX_NODE = process.env.PROXMOX_NODE || 'vps';
 
 // --- HOME ASSISTANT ---
 async function getHADevices() {
+  /*
   const url = process.env.HA_URL;
   const token = process.env.HA_TOKEN;
   if (!url || !token) return null;
@@ -46,6 +47,8 @@ async function getHADevices() {
     });
     return res.data;
   } catch (err) { return null; }
+  */
+  return null;
 }
 
 // --- ROUTES ---
@@ -74,6 +77,7 @@ app.get('/api/vms', async (req, res) => {
 
 app.get('/api/domotique/status', async (req, res) => {
   try {
+    /*
     const registry = JSON.parse(readFileSync(join(__dirname, 'service-registry.json'), 'utf8'));
     const devices = registry.domotique || [];
     const haStates = await getHADevices() || [];
@@ -102,6 +106,8 @@ app.get('/api/domotique/status', async (req, res) => {
       }));
 
     res.json({ success: true, devices: [...updatedDevices, ...auto] });
+    */
+    res.json({ success: true, devices: [] });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
