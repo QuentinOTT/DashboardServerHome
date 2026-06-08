@@ -12,6 +12,7 @@ import { readFileSync, writeFile } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
+import { exec } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '.env') });
@@ -25,13 +26,27 @@ app.use(express.json());
 // Protection globale
 process.on('uncaughtException', (err) => console.error('🔥 Erreur:', err.message));
 
+// ==========================================
+// 1. CONFIGURATION DU CLIENT API PROXMOX
+// ==========================================
+// Initialisation du client Axios configuré pour communiquer avec l'API Proxmox VE.
+// On récupère les identifiants sécurisés depuis les variables d'environnement (.env).
 const proxmoxApi = axios.create({
+  // URL de base vers l'API2 de Proxmox au format JSON (ex: https://pve.example.com:8006/api2/json)
   baseURL: `${process.env.PROXMOX_HOST ? process.env.PROXMOX_HOST.replace(/\/$/, '') : ''}/api2/json`,
+  
+  // Utilisation d'un Token d'API Proxmox PVE (PVEAPIToken=USER@REALM!TOKENID=SECRET)
+  // Cela évite de stocker ou d'envoyer le mot de passe utilisateur principal.
   headers: { 'Authorization': `PVEAPIToken=${process.env.PROXMOX_TOKEN_ID}=${process.env.PROXMOX_TOKEN_SECRET}` },
+  
+  // Désactivation de la validation stricte SSL si le certificat de Proxmox est auto-signé
   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+  
+  // Timeout de sécurité pour éviter de bloquer l'application si l'API est injoignable
   timeout: 5000
 });
 
+// Nom du nœud Proxmox cible à superviser (défini par défaut à 'vps')
 const PROXMOX_NODE = process.env.PROXMOX_NODE || 'vps';
 
 // --- HOME ASSISTANT ---
@@ -51,28 +66,43 @@ async function getHADevices() {
   return null;
 }
 
-// --- ROUTES ---
+// ==========================================
+// 2. POINTS D'ENTRÉE (ROUTES) DE L'API
+// ==========================================
+
+// Route : Récupérer le statut global du nœud (CPU, RAM, Uptime, Disque)
 app.get('/api/node/status', async (req, res) => {
   try {
+    // Requête HTTP GET vers le endpoint de statut Proxmox
     const response = await proxmoxApi.get(`/nodes/${PROXMOX_NODE}/status`);
+    // Renvoi des données brutes de santé du serveur Proxmox
     res.json({ success: true, data: response.data.data });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+  } catch (err) { 
+    res.status(500).json({ success: false, error: err.message }); 
+  }
 });
 
+// Route : Récupérer la liste des VM (Qemu) et Conteneurs (LXC)
 app.get('/api/vms', async (req, res) => {
   try {
+    // Exécution de requêtes parallèles pour optimiser le temps de réponse
     const [qemu, lxc] = await Promise.all([
-      proxmoxApi.get(`/nodes/${PROXMOX_NODE}/qemu`),
-      proxmoxApi.get(`/nodes/${PROXMOX_NODE}/lxc`)
+      proxmoxApi.get(`/nodes/${PROXMOX_NODE}/qemu`), // Liste des machines virtuelles
+      proxmoxApi.get(`/nodes/${PROXMOX_NODE}/lxc`)   // Liste des conteneurs LXC
     ]);
+    
+    // Fusion et normalisation des VM et LXC pour le Dashboard React
     const vms = [...qemu.data.data, ...lxc.data.data].map(vm => ({
       vmid: vm.vmid,
       name: vm.name,
-      status: vm.status,
-      type: vm.type || (vm.vmid < 500 ? 'qemu' : 'lxc')
+      status: vm.status, // running, stopped, etc.
+      type: vm.type || (vm.vmid < 500 ? 'qemu' : 'lxc') // Déduction du type si absent
     }));
+    
     res.json({ success: true, data: vms });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+  } catch (err) { 
+    res.status(500).json({ success: false, error: err.message }); 
+  }
 });
 
 app.get('/api/domotique/status', async (req, res) => {
@@ -112,5 +142,26 @@ app.get('/api/domotique/status', async (req, res) => {
 });
 
 app.get('/api/registry', (req, res) => res.json(JSON.parse(readFileSync(join(__dirname, 'service-registry.json'), 'utf8'))));
+
+// Route pour exécuter le script de configuration système (Annexe 17)
+app.post('/api/run-setup', (req, res) => {
+  const scriptPath = join(__dirname, 'setup-server.sh');
+  
+  console.log(`[SETUP] Lancement du script de configuration : ${scriptPath}`);
+  
+  // Exécution du script shell
+  exec(`bash "${scriptPath}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`[SETUP ERROR] ${error.message}`);
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message, 
+        details: stderr 
+      });
+    }
+    console.log(`[SETUP SUCCESS] Script exécuté avec succès.`);
+    res.json({ success: true, output: stdout });
+  });
+});
 
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 QuentinOtt Backend OK sur port ${PORT}`));

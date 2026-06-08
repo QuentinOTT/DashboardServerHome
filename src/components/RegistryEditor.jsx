@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info, Zap, Home } from 'lucide-react';
+import { X, Save, Plus, Trash2, Globe, Server, Shield, Loader2, AlertCircle, Info, Zap, Home, Terminal } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function RegistryEditor({ onClose, onSaveSuccess }) {
@@ -8,6 +8,32 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [runningSetup, setRunningSetup] = useState(false);
+  const [setupOutput, setSetupOutput] = useState('');
+
+  const handleRunSetup = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir exécuter le script de configuration système automatique ? Cela va installer Docker, Node.js, PM2 et configurer le pare-feu.")) {
+      return;
+    }
+    setRunningSetup(true);
+    setSetupOutput('Lancement de l\'exécution du script bash...\n');
+    try {
+      const res = await fetch('/api/run-setup', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Script exécuté avec succès !");
+        setSetupOutput(data.output || 'Script exécuté avec succès (aucun retour console).');
+      } else {
+        toast.error("Échec de l'exécution du script");
+        setSetupOutput(`Erreur d'exécution : ${data.error}\n\n[Détails de l'erreur] :\n${data.details || 'Aucun détail'}`);
+      }
+    } catch (err) {
+      toast.error("Erreur de connexion");
+      setSetupOutput(`Erreur de connexion réseau : ${err.message}`);
+    } finally {
+      setRunningSetup(false);
+    }
+  };
 
   useEffect(() => {
     fetchRegistry();
@@ -444,6 +470,47 @@ export default function RegistryEditor({ onClose, onSaveSuccess }) {
                   className="bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-amber-500/50 focus:outline-none"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Automation & Scripts Section */}
+          <div className="space-y-6 pt-12 border-t border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-cyan/10 flex items-center justify-center text-brand-cyan border border-brand-cyan/20">
+                <Terminal size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase">Script de Configuration</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Automatisation système (Annexe 17)</p>
+              </div>
+            </div>
+
+            <div className="p-8 rounded-[2rem] bg-slate-900/30 border border-white/5 space-y-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black text-white uppercase tracking-tight">Configuration Automatique du Serveur</h4>
+                  <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
+                    Exécute le script shell <code className="text-brand-cyan">setup-server.sh</code> pour mettre à jour le système, installer les dépendances critiques (Docker, Node.js, PM2) et ouvrir les ports requis.
+                  </p>
+                </div>
+                <button
+                  onClick={handleRunSetup}
+                  disabled={runningSetup}
+                  className="px-8 py-4 rounded-2xl bg-rose-500 text-white font-black text-xs hover:bg-rose-400 disabled:bg-slate-800 disabled:text-slate-600 transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  {runningSetup ? <Loader2 size={16} className="animate-spin" /> : <Terminal size={16} />}
+                  LANCER LE SCRIPT (SH)
+                </button>
+              </div>
+
+              {setupOutput && (
+                <div className="space-y-2 animate-enter">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Sortie Console / Logs</span>
+                  <pre className="p-6 rounded-2xl bg-black/90 border border-white/10 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                    {setupOutput}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
 
